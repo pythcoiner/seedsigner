@@ -3,6 +3,10 @@ class QRType:
         Used with DecodeQR and EncodeQR to communicate qr encoding type
     """
     PSBT__BASE64 = "psbt__base64"
+    SEED = "seed"
+    SEED__12 = "seed__12"
+    SEED__24 = "seed__24"
+    DESCRIPTOR = "descriptor"
     PSBT__SPECTER = "psbt__specter"
     PSBT__BASE43 = "psbt__base43"
     PSBT__UR2 = "psbt__ur2"
@@ -30,3 +34,5 @@ class QRType:
     BYTES__UR = "bytes__ur"
 
     INVALID = "invalid"
+
+

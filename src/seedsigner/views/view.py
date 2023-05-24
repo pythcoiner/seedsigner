@@ -3,9 +3,13 @@ from typing import List
 
 from seedsigner.gui.components import FontAwesomeIconConstants, GUIConstants
 from seedsigner.gui.screens import RET_CODE__POWER_BUTTON
-from seedsigner.gui.screens.screen import RET_CODE__BACK_BUTTON, DireWarningScreen, LargeButtonScreen, PowerOffScreen, PowerOffNotRequiredScreen, ResetScreen, WarningScreen
+from seedsigner.gui.screens.screen import RET_CODE__BACK_BUTTON, DireWarningScreen, LargeButtonScreen, ButtonListScreen
+from seedsigner.gui.screens.screen import PowerOffScreen, PowerOffNotRequiredScreen, ResetScreen, WarningScreen
 from seedsigner.models.threads import BaseThread
 from seedsigner.models import Settings
+from seedsigner.models import QRType
+
+from embit.networks import NETWORKS
 
 
 class BackStackView:
@@ -114,24 +118,24 @@ class Destination:
         return not obj == self
 
 
-
 #########################################################################################
 #
 # Root level Views don't have a sub-module home so they live at the top level here.
 #
 #########################################################################################
 class MainMenuView(View):
-    def run(self):
-        from .seed_views import SeedsMenuView
-        from .settings_views import SettingsMenuView
+    def run(self) -> Destination:
+        # from .seed_views import SeedsMenuView
+        # from .settings_views import SettingsMenuView
         from .scan_views import ScanView
-        from .tools_views import ToolsMenuView
+        # from .tools_views import ToolsMenuView
         from seedsigner.gui.screens import LargeButtonScreen
         menu_items = [
-            (("Scan", FontAwesomeIconConstants.QRCODE), ScanView),
-            (("Seeds", FontAwesomeIconConstants.KEY), SeedsMenuView),
-            (("Tools", FontAwesomeIconConstants.SCREWDRIVER_WRENCH), ToolsMenuView),
-            (("Settings", FontAwesomeIconConstants.GEAR), SettingsMenuView),
+            (("PSBT", FontAwesomeIconConstants.QRCODE), ScanView),
+            (("Descriptor", FontAwesomeIconConstants.QRCODE), ScanView),
+            # (("Seeds", FontAwesomeIconConstants.KEY), SeedsMenuView),
+            # (("Tools", FontAwesomeIconConstants.SCREWDRIVER_WRENCH), ToolsMenuView),
+            # (("Settings", FontAwesomeIconConstants.GEAR), SettingsMenuView),
         ]
 
         screen = LargeButtonScreen(
@@ -139,7 +143,7 @@ class MainMenuView(View):
             title_font_size=26,
             button_data=[entry[0] for entry in menu_items],
             show_back_button=False,
-            show_power_button=True,
+            show_power_button=False,
         )
         selected_menu_num = screen.display()
 
@@ -149,72 +153,244 @@ class MainMenuView(View):
         return Destination(menu_items[selected_menu_num][1])
 
 
+class HomeView(View):
+    def run(self) -> Destination:
 
-class PowerOptionsView(View):
-    def run(self):
-        RESET = ("Restart", FontAwesomeIconConstants.ROTATE_RIGHT)
-        POWER_OFF = ("Power Off", FontAwesomeIconConstants.POWER_OFF)
-        button_data = [RESET, POWER_OFF]
-        selected_menu_num = LargeButtonScreen(
-            title="Reset / Power",
-            show_back_button=True,
-            button_data=button_data
-        ).display()
+        from .scan_views import ScanView
+        from seedsigner.gui.screens import LargeButtonScreen
+        menu_items = [
+            (("PSBT", FontAwesomeIconConstants.QRCODE), SeedScanView),
+            (("Descriptor", FontAwesomeIconConstants.QRCODE), ScanView),
+            # (("Seeds", FontAwesomeIconConstants.KEY), SeedsMenuView),
+            # (("Tools", FontAwesomeIconConstants.SCREWDRIVER_WRENCH), ToolsMenuView),
+            # (("Settings", FontAwesomeIconConstants.GEAR), SettingsMenuView),
+        ]
 
-        if selected_menu_num == RET_CODE__BACK_BUTTON:
-            return Destination(BackStackView)
-        
-        elif button_data[selected_menu_num] == RESET:
-            return Destination(RestartView)
-        
-        elif button_data[selected_menu_num] == POWER_OFF:
-            return Destination(PowerOffView)
+        screen = LargeButtonScreen(
+            title="Home",
+            title_font_size=26,
+            button_data=[entry[0] for entry in menu_items],
+            show_back_button=False,
+            show_power_button=False,
+        )
+        selected_menu_num = screen.display()
 
-
-
-class RestartView(View):
-    def run(self):
-        thread = RestartView.DoResetThread()
-        thread.start()
-        ResetScreen().display()
+        if selected_menu_num == 0:
+            self.controller.scan_target = QRType.PSBT__BASE64
+        elif selected_menu_num == 1:
+            self.controller.scan_target = QRType.DESCRIPTOR
 
 
-    class DoResetThread(BaseThread):
-        def run(self):
-            import time
-            from subprocess import call
+        return Destination(menu_items[selected_menu_num][1])
 
-            # Give the screen just enough time to display the reset message before
-            # exiting.
-            time.sleep(0.25)
+class PSBTCheckView(View):
+    def run(self) -> Destination:
 
-            # Kill the SeedSigner process; Running the process again.
-            # `.*` is a wildcard to detect either `python`` or `python3`.
-            if Settings.HOSTNAME == Settings.SEEDSIGNER_OS:
-                call("kill $(pidof python*) & python /opt/src/main.py", shell=True)
-            else:
-                call("kill $(ps aux | grep '[p]ython.*main.py' | awk '{print $2}')", shell=True)
+        from .scan_views import ScanView
+        from seedsigner.gui.screens import ButtonListScreen
+
+        tx = self.controller.psbt
+        menu_items = []
+        my_fingerprint = self.controller.root_key.child(0).fingerprint
+
+        for inp in tx.inputs:
+            sats = inp.utxo.value
+            addr = inp.utxo.script_pubkey.address(NETWORKS['signet'])
+            addr = addr[:7] + '...' + addr[-5:]
+
+            from_myself = False
+            for pub in inp.bip32_derivations:
+                if inp.bip32_derivations[pub].fingerprint == my_fingerprint:
+                    from_myself = True
+            if from_myself:
+                menu_items.append(((f"{sats} from myself", None), None, None))
+
+        not_to_myself = 0
+        for out in tx.outputs:
+            sats = out.value
+            addr = out.script_pubkey.address(NETWORKS['signet'])
+            addr = addr[:7] + '...' + addr[-5:]
+            #  TODO: show address details
+
+            to_myself = False
+            for pub in out.bip32_derivations:
+                if out.bip32_derivations[pub].fingerprint == my_fingerprint:
+                    to_myself = True
+            if not to_myself:
+                not_to_myself += 1
+                menu_items.append(((f"{sats} to", None), None, None))
+                menu_items.append(((str(addr), None), None, None))
+
+        if not_to_myself == 0:
+            menu_items.append((("self send", None), None, None))
+
+        menu_items += [
+            (("Sign ", FontAwesomeIconConstants.QRCODE), HomeView, 'sign'),
+            (("Cancel ", FontAwesomeIconConstants.QRCODE), HomeView, None),
+        ]
+
+        screen = ButtonListScreen(
+            title="Check PSBT:",
+            title_font_size=26,
+            button_data=[entry[0] for entry in menu_items],
+            show_back_button=False,
+            show_power_button=False,
+        )
+
+
+        out = False
+        dest = None
+        while not out:
+            selected_menu_num = screen.display()
+
+            if menu_items[selected_menu_num][1] is not None:
+
+                dest = menu_items[selected_menu_num][1]
+                out = True
+
+                if menu_items[selected_menu_num][2] == 'sign':
+                    print('---- Sign tx ----')
+                    tx = self.controller.psbt
+                    print(tx)
+                    signed = tx.sign_with(self.controller.root_key)
+                    print(signed)
+                    print(tx)
 
 
 
-class PowerOffView(View):
-    def run(self):
-        if Settings.HOSTNAME == Settings.SEEDSIGNER_OS:
-            PowerOffNotRequiredScreen().display()
-            return Destination(BackStackView)
-        else:
-            thread = PowerOffView.PowerOffThread()
-            thread.start()
-            PowerOffScreen().display()
+        return Destination(dest)
+
+class SeedScanView(View):
+    def run(self) -> Destination:
+
+        from .scan_views import ScanView
+        from seedsigner.gui.screens import LargeButtonScreen
+        menu_items = []
+
+        menu_items.append((("Scan your seed", None), None, None, None))
+        menu_items.append((("Scan", FontAwesomeIconConstants.QRCODE), ScanView, QRType.SEED, PSBTScanView))
+
+        screen = ButtonListScreen(
+            title="SEED",
+            title_font_size=26,
+            button_data=[entry[0] for entry in menu_items],
+            show_back_button=False,
+            show_power_button=False,
+        )
+        out = False
+        dest = None
+        while not out:
+            selected_menu_num = screen.display()
+
+            if menu_items[selected_menu_num][1] is not None:
+                self.controller.scan_target = menu_items[selected_menu_num][2]
+                dest = menu_items[selected_menu_num][1]
+                self.controller.scan_target = menu_items[selected_menu_num][2]
+                self.controller.next_view = menu_items[selected_menu_num][3]
+                out = True
+
+        return Destination(dest)
+
+class PSBTScanView(View):
+    def run(self) -> Destination:
+
+        from .scan_views import ScanView
+        from seedsigner.gui.screens import LargeButtonScreen
+        menu_items = []
+
+        menu_items.append((("Scan your PSBT", None), None, None, None))
+        menu_items.append((("Scan", FontAwesomeIconConstants.QRCODE), ScanView, QRType.PSBT__BASE64, PSBTCheckView))
+
+        screen = ButtonListScreen(
+            title="PSBT",
+            title_font_size=26,
+            button_data=[entry[0] for entry in menu_items],
+            show_back_button=False,
+            show_power_button=False,
+        )
+        out = False
+        dest = None
+        while not out:
+            selected_menu_num = screen.display()
+
+            if menu_items[selected_menu_num][1] is not None:
+                self.controller.scan_target = menu_items[selected_menu_num][2]
+                dest = menu_items[selected_menu_num][1]
+                self.controller.scan_target = menu_items[selected_menu_num][2]
+                self.controller.next_view = menu_items[selected_menu_num][3]
+                out = True
+
+        return Destination(dest)
 
 
-    class PowerOffThread(BaseThread):
-        def run(self):
-            import time
-            from subprocess import call
-            while self.keep_running:
-                time.sleep(5)
-                call("sudo shutdown --poweroff now", shell=True)
+
+
+
+# class PowerOptionsView(View):
+#     def run(self):
+#         RESET = ("Restart", FontAwesomeIconConstants.ROTATE_RIGHT)
+#         POWER_OFF = ("Power Off", FontAwesomeIconConstants.POWER_OFF)
+#         button_data = [RESET, POWER_OFF]
+#         selected_menu_num = LargeButtonScreen(
+#             title="Reset / Power",
+#             show_back_button=True,
+#             button_data=button_data
+#         ).display()
+#
+#         if selected_menu_num == RET_CODE__BACK_BUTTON:
+#             return Destination(BackStackView)
+#
+#         elif button_data[selected_menu_num] == RESET:
+#             return Destination(RestartView)
+#
+#         elif button_data[selected_menu_num] == POWER_OFF:
+#             return Destination(PowerOffView)
+#
+#
+#
+# class RestartView(View):
+#     def run(self):
+#         thread = RestartView.DoResetThread()
+#         thread.start()
+#         ResetScreen().display()
+#
+#
+#     class DoResetThread(BaseThread):
+#         def run(self):
+#             import time
+#             from subprocess import call
+#
+#             # Give the screen just enough time to display the reset message before
+#             # exiting.
+#             time.sleep(0.25)
+#
+#             # Kill the SeedSigner process; Running the process again.
+#             # `.*` is a wildcard to detect either `python`` or `python3`.
+#             if Settings.HOSTNAME == Settings.SEEDSIGNER_OS:
+#                 call("kill $(pidof python*) & python /opt/src/main.py", shell=True)
+#             else:
+#                 call("kill $(ps aux | grep '[p]ython.*main.py' | awk '{print $2}')", shell=True)
+#
+#
+#
+# class PowerOffView(View):
+#     def run(self):
+#         if Settings.HOSTNAME == Settings.SEEDSIGNER_OS:
+#             PowerOffNotRequiredScreen().display()
+#             return Destination(BackStackView)
+#         else:
+#             thread = PowerOffView.PowerOffThread()
+#             thread.start()
+#             PowerOffScreen().display()
+#
+#
+#     class PowerOffThread(BaseThread):
+#         def run(self):
+#             import time
+#             from subprocess import call
+#             while self.keep_running:
+#                 time.sleep(5)
+#                 call("sudo shutdown --poweroff now", shell=True)
 
 
 

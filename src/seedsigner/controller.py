@@ -4,6 +4,8 @@ import os
 
 from embit.descriptor import Descriptor
 from embit.psbt import PSBT
+from embit import bip32, bip39
+from embit. networks import NETWORKS
 from PIL.Image import Image
 from typing import List
 
@@ -11,14 +13,12 @@ from seedsigner.gui.renderer import Renderer
 from seedsigner.hardware.buttons import HardwareButtons
 from seedsigner.hardware.microsd import MicroSD
 from seedsigner.views.screensaver import ScreensaverScreen
-from seedsigner.views.view import Destination, NotYetImplementedView, UnhandledExceptionView
+from seedsigner.views.view import Destination, NotYetImplementedView, UnhandledExceptionView, View
 
-from .models import Seed, SeedStorage, Settings, Singleton, PSBTParser
+from .models import Seed, SeedStorage, Settings, Singleton, PSBTParser, QRType
 
 
 logger = logging.getLogger(__name__)
-
-
 
 class BackStack(List[Destination]):
     def __repr__(self):
@@ -30,7 +30,6 @@ class BackStack(List[Destination]):
         out += "]"
         return out
             
-
 
 class Controller(Singleton):
     """
@@ -59,8 +58,12 @@ class Controller(Singleton):
     settings: Settings = None
     renderer: Renderer = None
 
+    scan_target: QRType = None
+    root_key: bip32.HDKey = None
+    next_view: View = None
+
     # TODO: Refactor these flow-related attrs that survive across multiple Screens.
-    # TODO: Should all in-memory flow-related attrs get wiped on MainMenuView?
+    # TODO: Should all in-memory flow-related attrs get wiped on HomeView?
     psbt: PSBT = None
     psbt_seed: Seed = None
     psbt_parser: PSBTParser = None
@@ -186,7 +189,7 @@ class Controller(Singleton):
 
 
     def start(self) -> None:
-        from .views import MainMenuView, BackStackView
+        from .views import HomeView, BackStackView
         from .views.screensaver import OpeningSplashScreen
 
         opening_splash = OpeningSplashScreen()
@@ -218,13 +221,13 @@ class Controller(Singleton):
                 View_cls(**init_args).run()
         """
         try:
-            next_destination = Destination(MainMenuView)
+            next_destination = Destination(HomeView)
             while True:
                 # Destination(None) is a special case; render the Home screen
                 if next_destination.View_cls is None:
-                    next_destination = Destination(MainMenuView)
+                    next_destination = Destination(HomeView)
 
-                if next_destination.View_cls == MainMenuView:
+                if next_destination.View_cls == HomeView:
                     # Home always wipes the back_stack
                     self.clear_back_stack()
                     
