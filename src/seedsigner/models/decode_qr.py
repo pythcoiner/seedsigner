@@ -34,10 +34,12 @@ class DecodeQR:
 
     def __init__(self, controller, wordlist_language_code: str = SettingsConstants.WORDLIST_LANGUAGE__ENGLISH):
         self.wordlist_language_code = wordlist_language_code
+        self.wordlist = Seed.get_wordlist(wordlist_language_code)
         self.complete = False
         self.qr_type = None
         self.decoder = None
         self.controller = controller
+        self.seed_phrase = []
 
     def add_image(self, image) -> DecodeQRStatus:
         data = DecodeQR.extract_qr_data(image, is_binary=True)
@@ -58,12 +60,44 @@ class DecodeQR:
             self.controller.psbt = psbt.PSBT.from_base64(data)
             self.complete = True
             
-        elif self.qr_type in [QRType.SEED__12, QRType.SEED__24]:
+        elif self.qr_type in [QRType.SEED__12, QRType.SEED__24,]:
             mnemonic = data
             seed = bip39.mnemonic_to_seed(mnemonic)
             root = bip32.HDKey.from_seed(seed, version=NETWORKS["signet"]['xprv'])
             self.controller.root_key = root
             self.complete = True
+
+        elif self.qr_type in [QRType.SEED__SEEDQR]:
+
+            try:
+                self.seed_phrase = []
+                segment = data
+                # Parse 12 or 24-word QR code
+                num_words = int(len(segment) / 4)
+                for i in range(0, num_words):
+                    index = int(segment[i * 4: (i * 4) + 4])
+                    word = self.wordlist[index]
+                    self.seed_phrase.append(word)
+                seed_length = len(self.seed_phrase)
+                if seed_length > 0:
+                    if seed_length not in [12, 24]:
+                        return DecodeQRStatus.INVALID
+                    mnemonic = ''
+                    for word in self.seed_phrase:
+                        mnemonic += f"{word} "
+                    mnemonic = mnemonic[:-1]
+                    seed = bip39.mnemonic_to_seed(mnemonic)
+                    root = bip32.HDKey.from_seed(seed, version=NETWORKS["signet"]['xprv'])
+                    self.controller.root_key = root
+
+                    self.complete = True
+                    return DecodeQRStatus.COMPLETE
+                else:
+                    return DecodeQRStatus.INVALID
+            except Exception as e:
+                print(e)
+                return DecodeQRStatus.INVALID
+
             
 
         # if self.qr_type in [QRType.PSBT__UR2, QRType.OUTPUT__UR, QRType.ACCOUNT__UR, QRType.BYTES__UR]:
@@ -220,9 +254,9 @@ class DecodeQR:
             # elif re.search("^UR:CRYPTO-ACCOUNT/", s, re.IGNORECASE):
             #     return QRType.ACCOUNT__UR
             # 
-            # elif re.search(r'^p(\d+)of(\d+) ([A-Za-z0-9+\/=]+$)', s,
-            #                re.IGNORECASE):  # must be base64 characters only in segment
-            #     return QRType.PSBT__SPECTER
+            if re.search(r'^p(\d+)of(\d+) ([A-Za-z0-9+\/=]+$)', s,
+                           re.IGNORECASE):  # must be base64 characters only in segment
+                return QRType.PSBT__SPECTER
             # 
             # elif re.search("^UR:BYTES/", s, re.IGNORECASE):
             #     return QRType.BYTES__UR
@@ -246,9 +280,9 @@ class DecodeQR:
             # elif "sortedmulti" in s:
             #     return QRType.WALLET__GENERIC
             # 
-            # # Seed
-            # if re.search(r'\d{48,96}', s):
-            #     return QRType.SEED__SEEDQR
+            # Seed
+            if re.search(r'\d{48,96}', s):
+                return QRType.SEED__SEEDQR
             # 
             # # Bitcoin Address
             # elif DecodeQR.is_bitcoin_address(s):
