@@ -68,7 +68,6 @@ class DecodeQR:
             self.complete = True
 
         elif self.qr_type in [QRType.SEED__SEEDQR]:
-
             try:
                 self.seed_phrase = []
                 segment = data
