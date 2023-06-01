@@ -28,10 +28,6 @@ class ScanView(View):
             if self.controller.scan_target == QRType.PSBT__BASE64:
                 if self.decoder.is_psbt :
 
-                    print(self.controller.psbt)
-                    # psbt = self.decoder.get_psbt()
-                    # self.controller.psbt = psbt
-
                     return Destination(self.controller.next_view, skip_current_view=True)
                 else:
                     return Destination(HomeView, skip_current_view=True)

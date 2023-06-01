@@ -6,7 +6,9 @@ import re
 from binascii import a2b_base64, b2a_base64
 from enum import IntEnum
 from embit import psbt, bip39, bip32
+from embit.descriptor import Descriptor
 from embit.networks import NETWORKS
+
 from pyzbar import pyzbar
 from pyzbar.pyzbar import ZBarSymbol
 
@@ -25,6 +27,15 @@ class DecodeQRStatus(IntEnum):
     COMPLETE = 3
     FALSE = 4
     INVALID = 5
+
+
+def from_liana(descriptor_str) -> Descriptor:
+    descriptor = descriptor_str.replace("'", "h").replace(";", ",").replace("\n", "").replace(" ", "").replace("<", "{").replace(">", "}")
+
+    if descriptor[-9] == "#":
+        descriptor = descriptor[:-9]
+
+    return Descriptor.from_string(descriptor)
 
 
 class DecodeQR:
@@ -53,13 +64,17 @@ class DecodeQR:
             return DecodeQRStatus.FALSE
 
         self.qr_type = DecodeQR.detect_segment_type(data, wordlist_language_code=self.wordlist_language_code)
-
+        print(f"self.qr_type={self.qr_type}")
         data = data.decode('utf-8')
 
         if self.qr_type == QRType.PSBT__BASE64:
             self.controller.psbt = psbt.PSBT.from_base64(data)
             self.complete = True
-            
+
+        elif self.qr_type == QRType.DESCRIPTOR:
+            self.controller.descriptor = from_liana(data)
+            print(self.controller.descriptor.full_policy)
+
         elif self.qr_type in [QRType.SEED__12, QRType.SEED__24,]:
             mnemonic = data
             seed = bip39.mnemonic_to_seed(mnemonic)
@@ -256,6 +271,9 @@ class DecodeQR:
             if re.search(r'^p(\d+)of(\d+) ([A-Za-z0-9+\/=]+$)', s,
                            re.IGNORECASE):  # must be base64 characters only in segment
                 return QRType.PSBT__SPECTER
+
+            if s[:4] == 'wsh(':
+                return QRType.DESCRIPTOR
             # 
             # elif re.search("^UR:BYTES/", s, re.IGNORECASE):
             #     return QRType.BYTES__UR
@@ -263,7 +281,7 @@ class DecodeQR:
             # elif DecodeQR.is_base64_psbt(s):
             #     return QRType.PSBT__BASE64
             # 
-            # # Wallet Descriptor
+            # Wallet Descriptor
             # desc_str = s.replace("\n", "").replace(" ", "")
             # if re.search(r'^p(\d+)of(\d+) ', s, re.IGNORECASE):
             #     # when not a SPECTER Base64 PSBT from above, assume it's json

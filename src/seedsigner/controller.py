@@ -70,6 +70,7 @@ class Controller(Singleton):
 
     unverified_address = None
 
+    descriptor: Descriptor = None
     multisig_wallet_descriptor: Descriptor = None
 
     image_entropy_preview_frames: List[Image] = None
