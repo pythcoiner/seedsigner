@@ -49,7 +49,9 @@ flowchart TB
     T200:::add -- True --> T201{"descriptor.owns(psbt)"} -- False --> V216
     T201:::add
     V202:::add
-    T201 -- True --> V202[DescriptorShowPolicy]
+    T201 -- True --> V202[DescriptorShowPolicy] --> V2000[PSBTFinalizeView]
+    V2000:::modify
+    
     T20{psbt_parser.policy} -- None ----> V211[PSBTUnsupportedScriptTypeWarningView]
     T20 --> T21{psbt_parser.change_amount} -- == 0 ---> V212[PSBTNoChangeWarningView]
     T21 -- > 0 ---> V215[PSBTChangeDetailsView]
@@ -62,8 +64,9 @@ flowchart TB
     T22 -- False --> V216[PSBTAddressVerificationFailedView] ---> V0[MainMenuView]
 
     T220 -- Next --> V217[PSBTFinalizeView]
-    V217 -- sign success --> V220[PSBTSignedQRDisplayView] --> V0
     V217 -- error --> V219[PSBTSigningErrorView] --> V200[PSBTSelectSeedView] 
+    V217 -- sign success --> V220[PSBTSignedQRDisplayView] --> V0
+
 
     
     
