@@ -1,7 +1,8 @@
 ### ScanView
 ```mermaid
 flowchart TB
-    classDef add fill:#00ff7f,stroke:#000000,stroke-width:4px;
+    classDef add fill:#00aa00, stroke:#000000,stroke-width:4px;
+    classDef modify fill:#aaaa7f;
     
     
     A[ScanView] --> T1{decoder.is_seed}
@@ -22,7 +23,14 @@ flowchart TB
 
     
     T4 -- True --> T40{descriptor.is_basic_multisig}
-    T40 -- False --> V99[NotYetImplementedView]
+    T40 -- False --> T41{descriptor.is_miniscript} -- False --> V99[NotYetImplementedView]
+    T41:::add -- True --> T42{descriptor.is_registered} 
+    T42:::add -- False --> V43[DescriptorRegisterView]
+    V43:::add
+    T42 -- True --> AAA[ScanView]
+    AAA:::modify
+
+    V99:::modify
     T40 -- True --> V42[MultisigWalletDescriptorView]
     
     T2 -- True --> V20[PSBTSelectSeedView]
