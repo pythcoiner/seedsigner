@@ -27,6 +27,8 @@ flowchart TB
     T41:::add -- True --> T42{descriptor.is_registered} 
     T42:::add -- False --> V43[DescriptorRegisterView]
     V43:::add
+    V43 --> V44[DescriptorDisplayView] --> AAA
+    V44:::add
     T42 -- True --> AAA[ScanView]
     AAA:::modify
 
@@ -43,7 +45,12 @@ flowchart TB
     V20 -- "24 words" --> V22[SeedMnemonicEntryView]
     V20 -- "scan seed" --> AA[ScanView]
     
-    V21 --> T20{psbt_parser.policy} -- None ----> V211[PSBTUnsupportedScriptTypeWarningView]
+    V21 --> T200{controller.miniscript_descriptor} -- None --> T20
+    T200:::add -- True --> T201{"descriptor.owns(psbt)"} -- False --> V216
+    T201:::add
+    V202:::add
+    T201 -- True --> V202[DescriptorShowPolicy]
+    T20{psbt_parser.policy} -- None ----> V211[PSBTUnsupportedScriptTypeWarningView]
     T20 --> T21{psbt_parser.change_amount} -- == 0 ---> V212[PSBTNoChangeWarningView]
     T21 -- > 0 ---> V215[PSBTChangeDetailsView]
     
@@ -51,8 +58,9 @@ flowchart TB
     V212   --> V213[PSBTMathView]
     V213 --> V214
     
-    V215 --> T22{is_change_addr_verified} -- False --> V216[PSBTAddressVerificationFailedView] ---> V0[MainMenuView]
-    T22  --> T220["Else"]
+    V215 --> T22{is_change_addr_verified} --> T220["Else"]
+    T22 -- False --> V216[PSBTAddressVerificationFailedView] ---> V0[MainMenuView]
+
     T220 -- Next --> V217[PSBTFinalizeView]
     V217 -- sign success --> V220[PSBTSignedQRDisplayView] --> V0
     V217 -- error --> V219[PSBTSigningErrorView] --> V200[PSBTSelectSeedView] 
