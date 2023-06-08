@@ -61,6 +61,7 @@ T1 -- No --> V2[DescriptorRegisterPolicyView]
         S1:::signer -->
         
         T2{ }
+        T2:::test
                 
             T2 -- continue --> V01
             
