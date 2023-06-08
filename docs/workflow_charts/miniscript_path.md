@@ -1,10 +1,35 @@
-
 ```mermaid
 graph TB
-classDef user fill:#3c3d3e;
+classDef user fill:#3c3d3e, color:#fff;
 classDef test fill:#46d367, color:#000;
 classDef signer fill:#7fd310, color:#000;
 classDef wallet fill:#ffaa7f, color:#000;
+
+L1(user action)
+L1:::user
+
+L2(wallet action)
+L2:::wallet
+
+L3(signer action)
+L3:::signer
+
+L4{signer\nlogic}
+L4:::test
+
+L5[signer View]
+
+```
+
+
+```mermaid
+graph TB
+classDef user fill:#3c3d3e, color:#fff;
+classDef test fill:#46d367, color:#000;
+classDef signer fill:#7fd310, color:#000;
+classDef wallet fill:#ffaa7f, color:#000;
+
+
     
 S0(load seed\n from QR)
 S0:::signer -->
