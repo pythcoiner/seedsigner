@@ -1,7 +1,7 @@
 ### ScanView
 ```mermaid
 graph TB
-classDef add fill:#00aa00, stroke:#000000,stroke-width:4px;
+classDef add fill:#00aa00, stroke:#000000,stroke-width:4px, color:#000;
 classDef modify fill:#aaaa7f;
 
 subgraph  Legend 
@@ -45,9 +45,7 @@ T410:::add -- False --> AAA[ScanView]
 T410 -- True --> V202
 V44:::add
 
-AAA:::modify
 
-V99:::modify
 T40 -- True --> V42[MultisigWalletDescriptorView]
 
 T2 -- True --> V20[PSBTSelectSeedView]
