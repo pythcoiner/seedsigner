@@ -24,7 +24,20 @@ T5 -- True --> V50[AddressVerificationStartView]
 T5 -- False --> V99[NotYetImplementedView]
 
 T1 -- True --> T10{passphrase_required}
+
 T10 -- True --> V10[SeedAddPassphraseView]
+
+V10 --> T11{"len(passphrase)"}
+
+T11 -- > 0 --> V12[SeedReviewPassphraseView]
+
+    V12 -- edit --> V13[SeedAddPassphraseView]
+    
+    V12 -- done --> V14[SeedOptionsView]
+
+T11 -- == 0 --> V11
+
+
 T10 -- False --> V11[SeedFinalizeView]
 
 T3 -- True --> V30[SettingsUpdatedView]
@@ -91,11 +104,6 @@ T220 -- Next --> V217[PSBTFinalizeView]
 V217 -- sign success --> V220[PSBTSignedQRDisplayView] --> V0
 V217 -- error --> V219[PSBTSigningErrorView] --> V200[PSBTSelectSeedView] 
 
-
-    
-
-
-    
 
 ```
 

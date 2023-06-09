@@ -31,8 +31,7 @@ classDef wallet fill:#ffaa7f, color:#000;
 
 
     
-S0(load seed\n from QR)
-S0:::signer -->
+V-10[Scanview] -->
 
 V1[ScanView] --> 
 
