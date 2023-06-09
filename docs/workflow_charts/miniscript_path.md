@@ -107,5 +107,21 @@ W4:::wallet
 
 ```
 
+```mermaid
+graph TB
+classDef user fill:#3c3d3e, color:#fff;
+classDef test fill:#46d367, color:#000;
+classDef signer fill:#7fd310, color:#000;
+classDef wallet fill:#ffaa7f, color:#000;
+
+
+V0[DescriptorRegisterPolicyView] -->
+
+V1[DescriptorRegisterAliases] -->
+
+V2[DescriptorRegisterPolicy] 
+
+```
+
 
 
