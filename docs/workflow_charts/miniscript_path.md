@@ -31,7 +31,7 @@ classDef wallet fill:#ffaa7f, color:#000;
 
 
     
-V-10[Scanview] -->
+
 
 V1[ScanView] --> 
 
@@ -44,11 +44,14 @@ U1:::user -->
 T1{Descriptor\n have PoR}
 T1:::test
 
-T1 -- PoR is invalid --> V3[DescriptorInvalidPoRView]
+T1 -- yes --> T4[SeedsMenuView]
 
+T4 -- select seed --> S3(check PoR)
 
+S3 -- PoR is invalid --> V03[DescriptorInvalidPoRView]
+S3:::signer
 
-T1 -- PoR is valid --> V4
+S3 -- PoR is valid --> V4
 
 T1 -- No --> V2[DescriptorRegisterPolicyView]
     V2 --> U2(user check policy)

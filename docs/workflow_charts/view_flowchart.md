@@ -130,7 +130,20 @@ V14 -- scan PSBT --> V63[ScanView]
 
 V14 -- verify adress --> V64[SeedAddressVerificationView]
 
-V14 -- export xpub --> V65[SeedExportXpubSigTypeView]
+V14 -- export xpub --> V65[SeedExportXpubSigTypeView] -->
+
+V70[SeedExportXpubScriptTypeView] -->
+
+V71[SeedExportXpubCoordinatorView] -->
+
+V72[SeedExportXpubWarningView] -->
+
+V73[SeedExportXpubDetailsView] -->
+
+V74[SeedExportXpubQRDisplayView] --> V75[MainMenuView]
+
+
+
 
 V14 -- adress explorer --> V66[SeedExportXpubScriptTypeView]
 
