@@ -3,6 +3,7 @@
 graph TB
 classDef add fill:#00aa00, stroke:#000000,stroke-width:4px, color:#000;
 classDef modify fill:#aaaa7f;
+classDef del fill:#ba6162, color:#fff;
 
 subgraph  Legend 
     direction BT
@@ -12,6 +13,8 @@ subgraph  Legend
     L2:::add
     L3[modified]
     L3:::modify
+    L4[deleted]
+    L4:::del
 end
 
 
@@ -32,13 +35,16 @@ V10 --> T11{"len(passphrase)"}
 T11 -- > 0 --> V12[SeedReviewPassphraseView]
 
     V12 -- edit --> V13[SeedAddPassphraseView]
+    V12 -- done --> V14
     
-    V12 -- done --> V14[SeedOptionsView]
+    V13 -- ok --> V12
 
 T11 -- == 0 --> V11
 
-
 T10 -- False --> V11[SeedFinalizeView]
+
+    V11 -- passphrase --> V13
+    V11 -- done ---> V14
 
 T3 -- True --> V30[SettingsUpdatedView]
 V30 -- any_other_button ---> V32[MainMenuView]
@@ -103,6 +109,40 @@ T220 -- Verify multisig --> V218[LoadMultisigWalletDescriptorView]
 T220 -- Next --> V217[PSBTFinalizeView]
 V217 -- sign success --> V220[PSBTSignedQRDisplayView] --> V0
 V217 -- error --> V219[PSBTSigningErrorView] --> V200[PSBTSelectSeedView] 
+
+subgraph  Legend 
+    direction LR
+
+V14[SeedOptionsView] -->
+
+T30{controller.resume\n_main_flow}
+
+-- FLOW__ADDRESS_EXPLORER --> V60[SeedExportXpubScriptTypeView]
+
+T30 -- FLOW__VERIFY_SINGLESIG_ADDR --> 
+
+V61[SeedAddressVerificationView] -->
+V610[AddressVerificationSuccessView]
+
+T30 -- FLOW__PSBT --> V62[PSBTOverviewView]
+
+V14 -- scan PSBT --> V63[ScanView]
+
+V14 -- verify adress --> V64[SeedAddressVerificationView]
+
+V14 -- export xpub --> V65[SeedExportXpubSigTypeView]
+
+V14 -- adress explorer --> V66[SeedExportXpubScriptTypeView]
+
+V14 -- backup --> V67[SeedBackupView]
+
+V14 -- BIP85 child seed --> V68[SeedBIP85ApplicationModeView]
+
+V14 -- discard --> V69[SeedDiscardView]
+
+
+
+end
 
 
 ```
