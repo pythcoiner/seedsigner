@@ -232,65 +232,65 @@ class SeedFinalizeView(View):
 
 
 
-class SeedAddPassphraseView(View):
-    def __init__(self):
-        super().__init__()
-        self.seed = self.controller.storage.get_pending_seed()
+# class SeedAddPassphraseView(View):
+#     def __init__(self):
+#         super().__init__()
+#         self.seed = self.controller.storage.get_pending_seed()
+#
+#
+#     def run(self):
+#         ret = seed_screens.SeedAddPassphraseScreen(passphrase=self.seed.passphrase).display()
+#
+#         if ret == RET_CODE__BACK_BUTTON:
+#             return Destination(BackStackView)
+#
+#         # The new passphrase will be the return value; it might be empty.
+#         self.seed.set_passphrase(ret)
+#         if len(self.seed.passphrase) > 0:
+#             return Destination(SeedReviewPassphraseView)
+#         else:
+#             return Destination(SeedFinalizeView)
 
 
-    def run(self):
-        ret = seed_screens.SeedAddPassphraseScreen(passphrase=self.seed.passphrase).display()
 
-        if ret == RET_CODE__BACK_BUTTON:
-            return Destination(BackStackView)
-        
-        # The new passphrase will be the return value; it might be empty.
-        self.seed.set_passphrase(ret)
-        if len(self.seed.passphrase) > 0:
-            return Destination(SeedReviewPassphraseView)
-        else:
-            return Destination(SeedFinalizeView)
-
-
-
-class SeedReviewPassphraseView(View):
-    """
-        Display the completed passphrase back to the user.
-    """
-    def __init__(self):
-        super().__init__()
-        self.seed = self.controller.storage.get_pending_seed()
-
-
-    def run(self):
-        EDIT = "Edit passphrase"
-        DONE = "Done"
-        button_data = [EDIT, DONE]
-
-        # Get the before/after fingerprints
-        network = self.settings.get_value(SettingsConstants.SETTING__NETWORK)
-        passphrase = self.seed.passphrase
-        fingerprint_with = self.seed.get_fingerprint(network=network)
-        self.seed.set_passphrase("")
-        fingerprint_without = self.seed.get_fingerprint(network=network)
-        self.seed.set_passphrase(passphrase)
-        
-        # Because we have ane explicit "Edit" button, we disable "BACK" to keep the
-        # routing options sane.
-        selected_menu_num = seed_screens.SeedReviewPassphraseScreen(
-            fingerprint_without=fingerprint_without,
-            fingerprint_with=fingerprint_with,
-            passphrase=self.seed.passphrase,
-            button_data=button_data,
-            show_back_button=False,
-        ).display()
-
-        if button_data[selected_menu_num] == EDIT:
-            return Destination(SeedAddPassphraseView)
-        
-        elif button_data[selected_menu_num] == DONE:
-            seed_num = self.controller.storage.finalize_pending_seed()
-            return Destination(SeedOptionsView, view_args={"seed_num": seed_num}, clear_history=True)
+# class SeedReviewPassphraseView(View):
+#     """
+#         Display the completed passphrase back to the user.
+#     """
+#     def __init__(self):
+#         super().__init__()
+#         self.seed = self.controller.storage.get_pending_seed()
+#
+#
+#     def run(self):
+#         EDIT = "Edit passphrase"
+#         DONE = "Done"
+#         button_data = [EDIT, DONE]
+#
+#         # Get the before/after fingerprints
+#         network = self.settings.get_value(SettingsConstants.SETTING__NETWORK)
+#         passphrase = self.seed.passphrase
+#         fingerprint_with = self.seed.get_fingerprint(network=network)
+#         self.seed.set_passphrase("")
+#         fingerprint_without = self.seed.get_fingerprint(network=network)
+#         self.seed.set_passphrase(passphrase)
+#
+#         # Because we have ane explicit "Edit" button, we disable "BACK" to keep the
+#         # routing options sane.
+#         selected_menu_num = seed_screens.SeedReviewPassphraseScreen(
+#             fingerprint_without=fingerprint_without,
+#             fingerprint_with=fingerprint_with,
+#             passphrase=self.seed.passphrase,
+#             button_data=button_data,
+#             show_back_button=False,
+#         ).display()
+#
+#         if button_data[selected_menu_num] == EDIT:
+#             return Destination(SeedAddPassphraseView)
+#
+#         elif button_data[selected_menu_num] == DONE:
+#             seed_num = self.controller.storage.finalize_pending_seed()
+#             return Destination(SeedOptionsView, view_args={"seed_num": seed_num}, clear_history=True)
             
             
             
