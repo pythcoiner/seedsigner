@@ -69,6 +69,13 @@ class Controller(Singleton):
 
     multisig_wallet_descriptor: Descriptor = None
 
+    #  Miniscript
+    miniscript_descriptor: Descriptor = None
+    miniscript_psbt: PSBT = None
+    miniscript_seed: Seed = None
+    miniscript_step: int = 0     # b0=seed_selected b1=descriptor_selected, b2=descriptor_checked b3=psbt_selected
+                                 # b4=psbt_checked, b5=psbt_signed
+
     image_entropy_preview_frames: List[Image] = None
     image_entropy_final_image: Image = None
 

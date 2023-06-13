@@ -2,6 +2,8 @@ class QRType:
     """
         Used with DecodeQR and EncodeQR to communicate qr encoding type
     """
+    MULTI__SPECTER = "multi__specter"
+
     PSBT__BASE64 = "psbt__base64"
     PSBT__SPECTER = "psbt__specter"
     PSBT__BASE43 = "psbt__base43"

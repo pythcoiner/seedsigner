@@ -330,6 +330,7 @@ class SeedDiscardView(View):
                 self.controller.discard_seed(self.seed_num)
             else:
                 self.controller.storage.clear_pending_seed()
+            self.controller.miniscript_seed = None
             return Destination(MainMenuView, clear_history=True)
 
 
@@ -347,7 +348,8 @@ class SeedOptionsView(View):
     def run(self):
         from seedsigner.views.psbt_views import PSBTOverviewView
 
-        SCAN_PSBT = ("Scan PSBT", FontAwesomeIconConstants.QRCODE)
+        # SCAN_PSBT = ("Scan PSBT", FontAwesomeIconConstants.QRCODE)
+        SELECT = "Select"
         VERIFY_ADDRESS = "Verify Addr"
         EXPORT_XPUB = "Export Xpub"
         EXPLORER = "Address Explorer"
@@ -357,31 +359,32 @@ class SeedOptionsView(View):
 
         button_data = []
 
-        if self.controller.resume_main_flow == Controller.FLOW__ADDRESS_EXPLORER:
-            # Jump straight back into the address explorer script type selection flow
-            # But do ont cancel the `resume_main_flow` as we'll still need that after
-            # derivation path is specified.
-            return Destination(SeedExportXpubScriptTypeView, view_args=dict(seed_num=self.seed_num, sig_type=SettingsConstants.SINGLE_SIG), skip_current_view=True)
+        # if self.controller.resume_main_flow == Controller.FLOW__ADDRESS_EXPLORER:
+        #     # Jump straight back into the address explorer script type selection flow
+        #     # But do ont cancel the `resume_main_flow` as we'll still need that after
+        #     # derivation path is specified.
+        #     return Destination(SeedExportXpubScriptTypeView, view_args=dict(seed_num=self.seed_num, sig_type=SettingsConstants.SINGLE_SIG), skip_current_view=True)
+        # 
+        # if self.controller.unverified_address:
+        #     if self.controller.resume_main_flow == Controller.FLOW__VERIFY_SINGLESIG_ADDR:
+        #         # Jump straight back into the single sig addr verification flow
+        #         self.controller.resume_main_flow = None
+        #         return Destination(SeedAddressVerificationView, view_args=dict(seed_num=self.seed_num), skip_current_view=True)
+        # 
+        #     addr = self.controller.unverified_address["address"][:7]
+        #     VERIFY_ADDRESS += f" {addr}"
+        #     button_data.append(VERIFY_ADDRESS)
+        #     
+        # if self.controller.psbt:
+        #  if PSBTParser.has_matching_input_fingerprint(self.controller.psbt, self.seed, network=self.settings.get_value(SettingsConstants.SETTING__NETWORK)):
+        #      if self.controller.resume_main_flow and self.controller.resume_main_flow == Controller.FLOW__PSBT:
+        #          # Re-route us directly back to the start of the PSBT flow
+        #          self.controller.resume_main_flow = None
+        #          self.controller.psbt_seed = self.seed
+        #          return Destination(PSBTOverviewView, skip_current_view=True)
 
-        if self.controller.unverified_address:
-            if self.controller.resume_main_flow == Controller.FLOW__VERIFY_SINGLESIG_ADDR:
-                # Jump straight back into the single sig addr verification flow
-                self.controller.resume_main_flow = None
-                return Destination(SeedAddressVerificationView, view_args=dict(seed_num=self.seed_num), skip_current_view=True)
-
-            addr = self.controller.unverified_address["address"][:7]
-            VERIFY_ADDRESS += f" {addr}"
-            button_data.append(VERIFY_ADDRESS)
-            
-        if self.controller.psbt:
-         if PSBTParser.has_matching_input_fingerprint(self.controller.psbt, self.seed, network=self.settings.get_value(SettingsConstants.SETTING__NETWORK)):
-             if self.controller.resume_main_flow and self.controller.resume_main_flow == Controller.FLOW__PSBT:
-                 # Re-route us directly back to the start of the PSBT flow
-                 self.controller.resume_main_flow = None
-                 self.controller.psbt_seed = self.seed
-                 return Destination(PSBTOverviewView, skip_current_view=True)
-
-        button_data.append(SCAN_PSBT)
+        # button_data.append(SCAN_PSBT)
+        button_data.append(SELECT)
         
         if self.settings.get_value(SettingsConstants.SETTING__XPUB_EXPORT) == SettingsConstants.OPTION__ENABLED:
             button_data.append(EXPORT_XPUB)
@@ -404,16 +407,20 @@ class SeedOptionsView(View):
             # Force BACK to always return to the Main Menu
             return Destination(MainMenuView)
 
-        if button_data[selected_menu_num] == SCAN_PSBT:
-            from seedsigner.views.scan_views import ScanView
-            self.controller.psbt_seed = self.controller.get_seed(self.seed_num)
-            return Destination(ScanView)
-
+        # if button_data[selected_menu_num] == SCAN_PSBT:
+        #     from seedsigner.views.scan_views import ScanView
+        #     self.controller.psbt_seed = self.controller.get_seed(self.seed_num)
+        #     return Destination(ScanView)
+        if button_data[selected_menu_num] == SELECT:
+            self.controller.miniscript_seed = self.controller.get_seed(self.seed_num)
+            return Destination(MainMenuView, clear_history=True)
+        
         elif button_data[selected_menu_num] == VERIFY_ADDRESS:
             return Destination(SeedAddressVerificationView, view_args=dict(seed_num=self.seed_num))
 
         elif button_data[selected_menu_num] == EXPORT_XPUB:
-            return Destination(SeedExportXpubSigTypeView, view_args=dict(seed_num=self.seed_num))
+            # return Destination(SeedExportXpubSigTypeView, view_args=dict(seed_num=self.seed_num))
+            return Destination(SeedExportXpubDetailsView, view_args=dict(seed_num=self.seed_num, sig_type=SettingsConstants.SINGLE_SIG, script_type=SettingsConstants.CUSTOM_DERIVATION, coordinator=SettingsConstants.COORDINATOR__LIANA, custom_derivation="m/48'/1'/0'"))
 
         elif button_data[selected_menu_num] == EXPLORER:
             self.controller.resume_main_flow = Controller.FLOW__ADDRESS_EXPLORER
@@ -699,11 +706,16 @@ class SeedExportXpubDetailsView(View):
 
             try:
                 embit_network = NETWORKS[SettingsConstants.map_network_to_embit(self.settings.get_value(SettingsConstants.SETTING__NETWORK))]
-                version = embit.bip32.detect_version(
-                    derivation_path,
-                    default="xpub",
-                    network=embit_network
-                )
+                print(f"embit_network={embit_network}")
+                if self.coordinator != SettingsConstants.COORDINATOR__LIANA:
+                    version = embit.bip32.detect_version(
+                        derivation_path,
+                        default="xpub",
+                        network=embit_network
+                    )
+                else:
+                    version = None
+                    
                 root = embit.bip32.HDKey.from_seed(
                     self.seed.seed_bytes,
                     version=embit_network["xprv"]
@@ -743,7 +755,7 @@ class SeedExportXpubQRDisplayView(View):
         self.seed = self.controller.get_seed(seed_num)
 
         qr_density = self.settings.get_value(SettingsConstants.SETTING__QR_DENSITY)
-        if coordinator == SettingsConstants.COORDINATOR__SPECTER_DESKTOP:
+        if coordinator in [SettingsConstants.COORDINATOR__SPECTER_DESKTOP, SettingsConstants.COORDINATOR__LIANA]:
             qr_type = QRType.XPUB__SPECTER
 
         elif coordinator == SettingsConstants.COORDINATOR__BLUE_WALLET:
@@ -761,6 +773,8 @@ class SeedExportXpubQRDisplayView(View):
         else:
             qr_type = QRType.XPUB__UR
 
+        print(f"network={self.settings.get_value(SettingsConstants.SETTING__NETWORK)}")
+
         self.qr_encoder = EncodeQR(
             seed_phrase=self.seed.mnemonic_list,
             passphrase=self.seed.passphrase,
@@ -770,6 +784,8 @@ class SeedExportXpubQRDisplayView(View):
             qr_density=qr_density,
             wordlist_language_code=self.seed.wordlist_language_code
         )
+
+        print(f"encoder={self.qr_encoder}")
 
 
     def run(self):

@@ -37,12 +37,14 @@ class SettingsConstants:
     COORDINATOR__SPARROW = "spa"
     COORDINATOR__SPECTER_DESKTOP = "spd"
     COORDINATOR__KEEPER = "kpr"
+    COORDINATOR__LIANA = "liana"
     ALL_COORDINATORS = [
         (COORDINATOR__BLUE_WALLET, "BlueWallet"),
         (COORDINATOR__NUNCHUK, "Nunchuk"),
         (COORDINATOR__SPARROW, "Sparrow"),
         (COORDINATOR__SPECTER_DESKTOP, "Specter Desktop"),
         (COORDINATOR__KEEPER, "Keeper"),
+        (COORDINATOR__LIANA, "Liana")
     ]
 
     LANGUAGE__ENGLISH = "en"
@@ -387,7 +389,7 @@ class SettingsDefinition:
                       type=SettingsConstants.TYPE__SELECT_1,
                       visibility=SettingsConstants.VISIBILITY__ADVANCED,
                       selection_options=SettingsConstants.ALL_NETWORKS,
-                      default_value=SettingsConstants.MAINNET),
+                      default_value=SettingsConstants.TESTNET),
 
         SettingsEntry(category=SettingsConstants.CATEGORY__FEATURES,
                       attr_name=SettingsConstants.SETTING__QR_DENSITY,

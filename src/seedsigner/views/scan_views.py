@@ -2,15 +2,24 @@ import json
 import re
 
 from embit.descriptor import Descriptor
+from embit import bip32,bip39
 
 from seedsigner.gui.screens.screen import RET_CODE__BACK_BUTTON
 from seedsigner.models import DecodeQR, Seed
 from seedsigner.models.settings import SettingsConstants
 
+
 from .view import BackStackView, MainMenuView, NotYetImplementedView, View, Destination
 
+from .miniscript_views import PSBTCheckView, SeedSignScanView, SignView, PSBTScanView, DescriptorScanView, PSBTQRDisplayView
 
-
+def process_por(seed, descriptor):
+    import hashlib
+    msg = seed + descriptor
+    msg = bytes(msg, 'utf-8')
+    return hashlib.new('ripemd160', msg).hexdigest()
+    
+    
 class ScanView(View):
     def run(self):
         from seedsigner.gui.screens.scan_screens import ScanScreen
@@ -42,23 +51,27 @@ class ScanView(View):
                         return Destination(SeedFinalizeView)
             
             elif self.decoder.is_psbt:
-                from seedsigner.views.psbt_views import PSBTSelectSeedView
+                from seedsigner.views.psbt_views import PSBTSelectSeedView, PSBTOverviewView
+                # from seedsigner.views.miniscript_views import PSBTCheckView
                 psbt = self.decoder.get_psbt()
                 self.controller.psbt = psbt
                 self.controller.psbt_parser = None
-                return Destination(PSBTSelectSeedView, skip_current_view=True)
+                if self.controller.miniscript_descriptor:
+                    return Destination(PSBTOverviewView, skip_current_view=True)
+                else:
+                    return Destination(PSBTSelectSeedView, skip_current_view=True)
 
-            elif self.decoder.is_settings:
-                from seedsigner.models.settings import Settings
-                settings = self.decoder.get_settings_data()
-                Settings.get_instance().update(new_settings=settings)
-
-                print(json.dumps(Settings.get_instance()._data, indent=4))
-
-                return Destination(SettingsUpdatedView, {"config_name": self.decoder.get_settings_config_name()})
+            # elif self.decoder.is_settings:
+            #     from seedsigner.models.settings import Settings
+            #     settings = self.decoder.get_settings_data()
+            #     Settings.get_instance().update(new_settings=settings)
+            # 
+            #     print(json.dumps(Settings.get_instance()._data, indent=4))
+            # 
+            #     return Destination(SettingsUpdatedView, {"config_name": self.decoder.get_settings_config_name()})
             
             elif self.decoder.is_wallet_descriptor:
-                from seedsigner.views.seed_views import MultisigWalletDescriptorView
+                # from seedsigner.views.seed_views import MultisigWalletDescriptorView
                 descriptor_str = self.decoder.get_wallet_descriptor()
 
                 try:
@@ -77,28 +90,32 @@ class ScanView(View):
 
                 descriptor = Descriptor.from_string(descriptor_str)
 
-                if not descriptor.is_basic_multisig:
-                    # TODO: Handle single-sig descriptors?
-                    print(f"Received single sig descriptor: {descriptor}")
+
+                if descriptor.miniscript:
+
+                        # print(f"Received miniscript descriptor: {descriptor}")
+                        self.controller.miniscript_descriptor = descriptor
+
+                        por = self.decoder.decoder.get_wallet_por()
+                        if self.controller.miniscript_seed:
+                            seed = bip39.mnemonic_to_seed(self.controller.miniscript_seed.mnemonic_str)
+                            fingerprint = bip32.HDKey.from_seed(seed).my_fingerprint
+
+                            for i in descriptor.keys:
+                                print(i)
+                                print(type(i.key))
+                                print(str(i)[1:9])
+                                print(str(i.fingerprint))
+                                print('---')
+                            por2 = process_por(self.controller.miniscript_seed.mnemonic_str, descriptor_str)
+
+                            print(f"por={por}")
+                            print(f"por2={por2}")
+
+                        return Destination(MainMenuView, clear_history=True)
+
+                else:
                     return Destination(NotYetImplementedView)
-
-                self.controller.multisig_wallet_descriptor = descriptor
-                return Destination(MultisigWalletDescriptorView, skip_current_view=True)
-            
-            elif self.decoder.is_address:
-                from seedsigner.views.seed_views import AddressVerificationStartView
-                address = self.decoder.get_address()
-                (script_type, network) = self.decoder.get_address_type()
-
-                return Destination(
-                    AddressVerificationStartView,
-                    skip_current_view=True,
-                    view_args={
-                        "address": address,
-                        "script_type": script_type,
-                        "network": network,
-                    }
-                )
             
             else:
                 return Destination(NotYetImplementedView)

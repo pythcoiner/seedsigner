@@ -130,8 +130,8 @@ class MainMenuView(View):
         menu_items = [
             (("Scan", FontAwesomeIconConstants.QRCODE), ScanView),
             (("Seeds", FontAwesomeIconConstants.KEY), SeedsMenuView),
-            (("Tools", FontAwesomeIconConstants.SCREWDRIVER_WRENCH), ToolsMenuView),
-            (("Settings", FontAwesomeIconConstants.GEAR), SettingsMenuView),
+            # (("Tools", FontAwesomeIconConstants.SCREWDRIVER_WRENCH), ToolsMenuView),
+            # (("Settings", FontAwesomeIconConstants.GEAR), SettingsMenuView),
         ]
 
         screen = LargeButtonScreen(
@@ -141,7 +141,14 @@ class MainMenuView(View):
             show_back_button=False,
             show_power_button=True,
         )
+        
+        print(f"self.controller.miniscript_descriptor={self.controller.miniscript_descriptor}")
+        print(f"self.controller.miniscript_psbt={self.controller.miniscript_psbt}")
+        print(f"self.controller.miniscript_seed={self.controller.miniscript_seed}")
+
         selected_menu_num = screen.display()
+
+
 
         if selected_menu_num == RET_CODE__POWER_BUTTON:
             return Destination(PowerOptionsView)

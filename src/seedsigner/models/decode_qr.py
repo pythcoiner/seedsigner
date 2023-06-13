@@ -55,10 +55,13 @@ class DecodeQR:
 
 
     def add_data(self, data):
+        print(f'DecodeQR.add_data({data}')
         if data == None:
             return DecodeQRStatus.FALSE
 
         qr_type = DecodeQR.detect_segment_type(data, wordlist_language_code=self.wordlist_language_code)
+
+        print(f"qr_type={qr_type}")
 
         if self.qr_type == None:
             self.qr_type = qr_type
@@ -128,6 +131,7 @@ class DecodeQR:
             # All other formats use the same method signature
             rt = self.decoder.add(qr_str, self.qr_type)
             if rt == DecodeQRStatus.COMPLETE:
+                print("Complete!")
                 self.complete = True
             return rt
 
@@ -147,6 +151,7 @@ class DecodeQR:
         if self.complete:
             if self.qr_type == QRType.PSBT__UR2:
                 cbor = self.decoder.result_message().cbor
+                print(UR_PSBT.from_cbor(cbor).data)
                 return UR_PSBT.from_cbor(cbor).data
 
             else:
@@ -320,6 +325,8 @@ class DecodeQR:
                 # TODO: Convert the test suite rather than handle here?
                 s = s.decode('utf-8')
 
+
+
             # PSBT
             if re.search("^UR:CRYPTO-PSBT/", s, re.IGNORECASE):
                 return QRType.PSBT__UR2
@@ -343,6 +350,7 @@ class DecodeQR:
             desc_str = s.replace("\n","").replace(" ","")
             if re.search(r'^p(\d+)of(\d+) ', s, re.IGNORECASE):
                 # when not a SPECTER Base64 PSBT from above, assume it's json
+                print("specter")
                 return QRType.WALLET__SPECTER
 
             elif re.search(r'^\{\"label\".*\"descriptor\"\:.*', desc_str, re.IGNORECASE):
@@ -1043,6 +1051,14 @@ class SpecterWalletQrDecoder(BaseAnimatedQrDecoder):
             return data['descriptor']
         return None
 
+    def get_wallet_por(self) -> str:
+        if self.is_valid:
+            j = "".join(self.segments)
+            data = json.loads(j)
+            if 'por' in data.keys():
+                if data['por'] != '':
+                    return data['por']
+        return None
 
     def is_complete(self) -> bool:
         return self.complete and self.is_valid()
