@@ -217,3 +217,27 @@ class PSBTQRDisplayView(View):
         # We're done with this PSBT. Route back to MainMenuView which always
         #   clears all ephemeral data (except in-memory seeds).
         return Destination(MainMenuView, clear_history=True)
+
+
+class MiniscriptShowPolicyView(View):
+    def __init__(self, alias):
+        super().__init__()
+        self.alias = alias
+
+    def run(self):
+        menu_items = [self.alias, 'OK', 'Cancel']
+
+        while True:
+            selected_menu_num = ButtonListScreen(
+                title="Descriptor Alias:",
+                is_button_text_centered=False,
+                button_data=menu_items
+            ).display()
+
+            print(f"selected_menu_num={selected_menu_num}")
+            if menu_items[selected_menu_num] == 'OK':
+                self.controller.miniscript_step = self.controller.miniscript_step | 4  # descriptor checked step
+                return Destination(MainMenuView)
+            elif menu_items[selected_menu_num] == 'Cancel':
+                return Destination(MainMenuView)
+

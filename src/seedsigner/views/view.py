@@ -145,6 +145,7 @@ class MainMenuView(View):
         print(f"self.controller.miniscript_descriptor={self.controller.miniscript_descriptor}")
         print(f"self.controller.miniscript_psbt={self.controller.miniscript_psbt}")
         print(f"self.controller.miniscript_seed={self.controller.miniscript_seed}")
+        print(f"self.controller.miniscript_step={self.controller.miniscript_step}")
 
         selected_menu_num = screen.display()
 

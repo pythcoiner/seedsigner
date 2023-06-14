@@ -331,6 +331,7 @@ class SeedDiscardView(View):
             else:
                 self.controller.storage.clear_pending_seed()
             self.controller.miniscript_seed = None
+            self.controller.miniscript_step = self.controller.miniscript_step & 62
             return Destination(MainMenuView, clear_history=True)
 
 
@@ -413,6 +414,7 @@ class SeedOptionsView(View):
         #     return Destination(ScanView)
         if button_data[selected_menu_num] == SELECT:
             self.controller.miniscript_seed = self.controller.get_seed(self.seed_num)
+            self.controller.miniscript_step = self.controller.miniscript_step | 1
             return Destination(MainMenuView, clear_history=True)
         
         elif button_data[selected_menu_num] == VERIFY_ADDRESS:

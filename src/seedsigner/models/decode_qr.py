@@ -55,13 +55,13 @@ class DecodeQR:
 
 
     def add_data(self, data):
-        print(f'DecodeQR.add_data({data}')
+        # print(f'DecodeQR.add_data({data}')
         if data == None:
             return DecodeQRStatus.FALSE
 
         qr_type = DecodeQR.detect_segment_type(data, wordlist_language_code=self.wordlist_language_code)
 
-        print(f"qr_type={qr_type}")
+        # print(f"qr_type={qr_type}")
 
         if self.qr_type == None:
             self.qr_type = qr_type
@@ -1058,6 +1058,15 @@ class SpecterWalletQrDecoder(BaseAnimatedQrDecoder):
             if 'por' in data.keys():
                 if data['por'] != '':
                     return data['por']
+        return None
+
+    def get_wallet_alias(self) -> str:
+        if self.is_valid:
+            j = "".join(self.segments)
+            data = json.loads(j)
+            if 'desc_alias' in data.keys():
+                if data['desc_alias'] != '':
+                    return data['desc_alias']
         return None
 
     def is_complete(self) -> bool:

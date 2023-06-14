@@ -13,9 +13,10 @@ from .view import BackStackView, MainMenuView, NotYetImplementedView, View, Dest
 
 from .miniscript_views import PSBTCheckView, SeedSignScanView, SignView, PSBTScanView, DescriptorScanView, PSBTQRDisplayView
 
-def process_por(seed, descriptor):
+
+def process_por(seed, descriptor, alias):
     import hashlib
-    msg = seed + descriptor
+    msg = seed + descriptor + alias
     msg = bytes(msg, 'utf-8')
     return hashlib.new('ripemd160', msg).hexdigest()
     
@@ -23,6 +24,8 @@ def process_por(seed, descriptor):
 class ScanView(View):
     def run(self):
         from seedsigner.gui.screens.scan_screens import ScanScreen
+        from seedsigner.views.seed_views import SeedsMenuView
+        from seedsigner.views.miniscript_views import MiniscriptShowPolicyView
 
         wordlist_language_code = self.settings.get_value(SettingsConstants.SETTING__WORDLIST_LANGUAGE)
         self.decoder = DecodeQR(wordlist_language_code=wordlist_language_code)
@@ -90,29 +93,56 @@ class ScanView(View):
 
                 descriptor = Descriptor.from_string(descriptor_str)
 
-
                 if descriptor.miniscript:
-
                         # print(f"Received miniscript descriptor: {descriptor}")
                         self.controller.miniscript_descriptor = descriptor
+                        self.controller.miniscript_step = self.controller.miniscript_step | 2  # descriptor selected step
 
-                        por = self.decoder.decoder.get_wallet_por()
                         if self.controller.miniscript_seed:
                             seed = bip39.mnemonic_to_seed(self.controller.miniscript_seed.mnemonic_str)
                             fingerprint = bip32.HDKey.from_seed(seed).my_fingerprint
 
+                            # check if seed have control on descriptor
+                            have_control = False
                             for i in descriptor.keys:
-                                print(i)
-                                print(type(i.key))
-                                print(str(i)[1:9])
-                                print(str(i.fingerprint))
-                                print('---')
-                            por2 = process_por(self.controller.miniscript_seed.mnemonic_str, descriptor_str)
+                                if i.fingerprint == fingerprint:
+                                    have_control = True
+                                    
+                            #  check PoR
+                            if have_control:
+                                por = self.decoder.decoder.get_wallet_por()
+                                alias = self.decoder.decoder.get_wallet_alias()
+                                if por == '':
+                                    # return Destination(DescriptorRegisterPolicyView)
+                                    print("Destination=>DescriptorRegisterPolicyView")
+                                    return Destination(MainMenuView, clear_history=True)
+                                    pass
+                                por2 = process_por(self.controller.miniscript_seed.mnemonic_str, descriptor_str, alias)
+                                # print(f"por2={por2}")
 
-                            print(f"por={por}")
-                            print(f"por2={por2}")
+                                #  descriptor have valid PoR
+                                if por == por2:
+                                    # return Destination(MiniscriptShowPolicyView)
+                                    print("Destination=>MiniscriptShowPolicyView")
+                                    return Destination(MiniscriptShowPolicyView, view_args={'alias': alias})
+                                    pass
 
-                        return Destination(MainMenuView, clear_history=True)
+                                else:
+                                    # TODO: invalid PoR
+                                    # return Destination(DescriptorInvalidPoRView)
+                                    print("Destination=>DescriptorInvalidPoRView")
+                                    return Destination(MainMenuView, clear_history=True)
+                                    pass
+
+                            else:
+                                # TODO: Warning=> "the selected seed don't have control on this descriptor, select an other one
+                                print("Destination=>DescriptorWrongSeed")
+                                return Destination(SeedsMenuView, clear_history=True)
+                        else:
+                            # TODO: Warning=> "select a seed"
+                            print("Destination=>DescriptorSelectSeed")
+                            return Destination(SeedsMenuView, clear_history=True)
+
 
                 else:
                     return Destination(NotYetImplementedView)
