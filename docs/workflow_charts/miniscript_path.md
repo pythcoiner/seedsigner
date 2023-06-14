@@ -44,12 +44,21 @@ U1:::user -->
 T1{Descriptor\n have PoR}
 T1:::test
 
-T1 -- yes --> T4[SeedsMenuView]
+T1 -- yes --> T4{seed_selected}
+T4:::test
+T4 -- no --> V04
+T4 -- yes --> S3
 
-T4 -- select seed --> S3(check PoR)
+
+
+V04[SeedsMenuView] -- select seed --> S3(check PoR)
+
+
 
 S3 -- PoR is invalid --> V03[DescriptorInvalidPoRView]
 S3:::signer
+
+V03 -- change seed --> V04
 
 S3 -- PoR is valid --> V4
 
