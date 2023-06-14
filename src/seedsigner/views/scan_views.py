@@ -55,14 +55,34 @@ class ScanView(View):
             
             elif self.decoder.is_psbt:
                 from seedsigner.views.psbt_views import PSBTSelectSeedView, PSBTOverviewView
-                # from seedsigner.views.miniscript_views import PSBTCheckView
+                from seedsigner.views.miniscript_views import PSBTCheckView
                 psbt = self.decoder.get_psbt()
-                self.controller.psbt = psbt
-                self.controller.psbt_parser = None
-                if self.controller.miniscript_descriptor:
-                    return Destination(PSBTOverviewView, skip_current_view=True)
-                else:
+                self.controller.miniscript_psbt = psbt
+                self.controller.miniscript_step = self.controller.miniscript_step | 8
+
+                step = self.controller.miniscript_step
+
+                #  seed selected and descriptor selected & checked
+                if (step & 1) == 1 and (step & 4) == 4:
+                    return Destination(PSBTCheckView, skip_current_view=True)
+
+                # no seed
+                elif (step & 1) == 0:
+                    #  TODO: Warning "Seed not selected, you might select one"
                     return Destination(PSBTSelectSeedView, skip_current_view=True)
+
+                # no descriptor
+                elif (step & 2) == 0:
+                    #  TODO: Warning "Descriptor not selected, you might scan one"
+                    return Destination(ScanView, skip_current_view=True)
+
+                # descriptor not checked
+                elif (step & 4) == 0:
+                    #  TODO: Warning "Descriptor not checked, you might review it"
+                    return Destination(DescriptorRegisterPolicyView, skip_current_view=True)
+
+                else:
+                    return Destination(NotYetImplementedView, skip_current_view=True)
 
             # elif self.decoder.is_settings:
             #     from seedsigner.models.settings import Settings
@@ -97,6 +117,7 @@ class ScanView(View):
                         # print(f"Received miniscript descriptor: {descriptor}")
                         self.controller.miniscript_descriptor = descriptor
                         self.controller.miniscript_step = self.controller.miniscript_step | 2  # descriptor selected step
+                        self.controller.miniscript_step = self.controller.miniscript_step & 59 # descriptor unchecked
 
                         if self.controller.miniscript_seed:
                             seed = bip39.mnemonic_to_seed(self.controller.miniscript_seed.mnemonic_str)

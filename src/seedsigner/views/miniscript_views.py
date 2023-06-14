@@ -10,6 +10,7 @@ from seedsigner.models.encode_qr import EncodeQR
 
 from embit.networks import NETWORKS
 from embit.descriptor import Descriptor
+from embit import bip39, bip32
 from embit.bip32 import HDKey
 from embit.psbt import PSBT
 
@@ -18,11 +19,12 @@ from .view import BackStackView, View, Destination, MainMenuView
 
 class PSBTCheckView(View):
     def run(self) -> Destination:
+        # TODO: add detailed review on input and output details
 
         from .scan_views import ScanView
         from seedsigner.gui.screens import ButtonListScreen
 
-        tx = self.controller.psbt
+        tx = self.controller.miniscript_psbt
         menu_items = []
         descriptor: Descriptor = self.controller.miniscript_descriptor
 
@@ -54,8 +56,8 @@ class PSBTCheckView(View):
             menu_items.append((("self send", None), None, None))
 
         menu_items += [
-            (("Sign ", FontAwesomeIconConstants.QRCODE), SeedSignScanView),
-            (("Cancel ", FontAwesomeIconConstants.QRCODE), MainMenuView),
+            (("Sign ", None), SignView),
+            (("Cancel ", None), MainMenuView),
         ]
 
         screen = ButtonListScreen(
@@ -74,8 +76,6 @@ class PSBTCheckView(View):
             if menu_items[selected_menu_num][1] is not None:
                 dest = menu_items[selected_menu_num][1]
                 out = True
-
-        self.controller.miniscript_descriptor = None
 
         return Destination(dest)
 
@@ -118,11 +118,11 @@ class SignView(View):
         from seedsigner.gui.screens import LargeButtonScreen
         menu_items = []
 
-        menu_items.append((("Sign", None), PSBTQRDisplayView, True))
+        menu_items.append((("Display signed PSBT", None), PSBTQRDisplayView, True))
         menu_items.append((("Cancel", None), MainMenuView, False))
 
         screen = ButtonListScreen(
-            title="SEED",
+            title="Signing...",
             title_font_size=26,
             button_data=[entry[0] for entry in menu_items],
             show_back_button=False,
@@ -134,9 +134,11 @@ class SignView(View):
         dest = menu_items[selected_menu_num][1]
 
         if menu_items[selected_menu_num][2]:
-            root: HDKey = self.controller.root_key
-            psbt: PSBT = self.controller.psbt
-            psbt.sign_with(root)
+            seed = bip39.mnemonic_to_seed(self.controller.miniscript_seed.mnemonic_str)
+            root: bip32.HDKey = bip32.HDKey.from_seed(seed)
+            psbt: PSBT = self.controller.miniscript_psbt
+            signed = psbt.sign_with(root)
+            print(f"signed inputs:{signed}")
 
         return Destination(dest)
 
@@ -207,12 +209,14 @@ class DescriptorScanView(View):
 class PSBTQRDisplayView(View):
     def run(self):
         qr_encoder = EncodeQR(
-            psbt=self.controller.psbt,
+            psbt=self.controller.miniscript_psbt,
             qr_type=QRType.PSBT__SPECTER,  # All coordinators (as of 2022-08) use this format
             qr_density=self.settings.get_value(SettingsConstants.SETTING__QR_DENSITY),
             wordlist_language_code=self.settings.get_value(SettingsConstants.SETTING__WORDLIST_LANGUAGE),
         )
         QRDisplayScreen(qr_encoder=qr_encoder).display()
+
+        self.controller.miniscript_psbt = None
 
         # We're done with this PSBT. Route back to MainMenuView which always
         #   clears all ephemeral data (except in-memory seeds).
