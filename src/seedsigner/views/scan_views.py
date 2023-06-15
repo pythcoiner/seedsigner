@@ -11,7 +11,8 @@ from seedsigner.models.settings import SettingsConstants
 
 from .view import BackStackView, MainMenuView, NotYetImplementedView, View, Destination
 
-from .miniscript_views import PSBTCheckView, SeedSignScanView, SignView, PSBTScanView, DescriptorScanView, PSBTQRDisplayView
+from .miniscript_views import PSBTCheckView, SeedSignScanView, SignView, PSBTScanView, DescriptorScanView
+from .miniscript_views import PSBTQRDisplayView, SeedNotSelectedView, DescriptorNotSelectedView
 
 
 def process_por(seed, descriptor, alias):
@@ -24,7 +25,7 @@ def process_por(seed, descriptor, alias):
 class ScanView(View):
     def run(self):
         from seedsigner.gui.screens.scan_screens import ScanScreen
-        from seedsigner.views.seed_views import SeedsMenuView
+        from seedsigner.views.seed_views import SeedsMenuView, LoadSeedView
         from seedsigner.views.miniscript_views import MiniscriptShowPolicyView
 
         wordlist_language_code = self.settings.get_value(SettingsConstants.SETTING__WORDLIST_LANGUAGE)
@@ -68,13 +69,12 @@ class ScanView(View):
 
                 # no seed
                 elif (step & 1) == 0:
-                    #  TODO: Warning "Seed not selected, you might select one"
-                    return Destination(PSBTSelectSeedView, skip_current_view=True)
+                    return Destination(LoadSeedView, skip_current_view=True)
 
                 # no descriptor
                 elif (step & 2) == 0:
                     #  TODO: Warning "Descriptor not selected, you might scan one"
-                    return Destination(ScanView, skip_current_view=True)
+                    return Destination(DescriptorNotSelectedView, skip_current_view=True)
 
                 # descriptor not checked
                 elif (step & 4) == 0:
@@ -114,7 +114,7 @@ class ScanView(View):
                 descriptor = Descriptor.from_string(descriptor_str)
 
                 if descriptor.miniscript:
-                        # print(f"Received miniscript descriptor: {descriptor}")
+
                         self.controller.miniscript_descriptor = descriptor
                         self.controller.miniscript_step = self.controller.miniscript_step | 2  # descriptor selected step
                         self.controller.miniscript_step = self.controller.miniscript_step & 59 # descriptor unchecked
@@ -160,10 +160,7 @@ class ScanView(View):
                                 print("Destination=>DescriptorWrongSeed")
                                 return Destination(SeedsMenuView, clear_history=True)
                         else:
-                            # TODO: Warning=> "select a seed"
-                            print("Destination=>DescriptorSelectSeed")
-                            return Destination(SeedsMenuView, clear_history=True)
-
+                            return Destination(SeedNotSelectedView, clear_history=True)
 
                 else:
                     return Destination(NotYetImplementedView)

@@ -17,6 +17,7 @@ from embit.psbt import PSBT
 from .view import BackStackView, View, Destination, MainMenuView
 
 
+
 class PSBTCheckView(View):
     def run(self) -> Destination:
         # TODO: add detailed review on input and output details
@@ -238,10 +239,38 @@ class MiniscriptShowPolicyView(View):
                 button_data=menu_items
             ).display()
 
-            print(f"selected_menu_num={selected_menu_num}")
             if menu_items[selected_menu_num] == 'OK':
                 self.controller.miniscript_step = self.controller.miniscript_step | 4  # descriptor checked step
+                # if PSBT load and not signed
+                if (self.controller.miniscript_step & 8) == 8 and (self.controller.miniscript_step & 16) == 0:
+                    return Destination(PSBTCheckView)
                 return Destination(MainMenuView)
             elif menu_items[selected_menu_num] == 'Cancel':
                 return Destination(MainMenuView)
+
+class SeedNotSelectedView(View):
+
+    def run(self):
+        from .seed_views import LoadSeedView
+        WarningScreen(
+            title="Seed not selected!",
+            status_headline="",
+            text="No selected seed, please scan/select one!",
+            button_data=["OK"],
+        ).display()
+
+        return Destination(LoadSeedView)
+
+class DescriptorNotSelectedView(View):
+
+    def run(self):
+        from .scan_views import ScanView
+        WarningScreen(
+            title="Descriptor not selected!",
+            status_headline="",
+            text="No descriptor, please scan one!",
+            button_data=["OK"],
+        ).display()
+
+        return Destination(ScanView)
 

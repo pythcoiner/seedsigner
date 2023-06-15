@@ -225,6 +225,8 @@ class SeedFinalizeView(View):
 
         if button_data[selected_menu_num] == FINALIZE:
             seed_num = self.controller.storage.finalize_pending_seed()
+            #  TODO: if descriptor loaded & not checked ==> go check descriptor ==> descriptor have PoR?
+
             return Destination(SeedOptionsView, view_args={"seed_num": seed_num}, clear_history=True)
 
         elif button_data[selected_menu_num] == PASSPHRASE:
