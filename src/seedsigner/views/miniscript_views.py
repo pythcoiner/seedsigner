@@ -15,7 +15,7 @@ from embit.bip32 import HDKey
 from embit.psbt import PSBT
 
 from .view import BackStackView, View, Destination, MainMenuView, NotYetImplementedView
-
+from seedsigner.models.miniscript import MiniPSBT
 
 
 class PSBTCheckView(View):
@@ -25,9 +25,9 @@ class PSBTCheckView(View):
         from .scan_views import ScanView
         from seedsigner.gui.screens import ButtonListScreen
 
-        tx = self.controller.miniscript_psbt
+        tx = self.controller.miniscript.psbt.psbt
         menu_items = []
-        descriptor: Descriptor = self.controller.miniscript_descriptor
+        descriptor: Descriptor = self.controller.miniscript.descriptor.descriptor
 
         for inp in tx.inputs:
             sats = inp.utxo.value
@@ -81,36 +81,36 @@ class PSBTCheckView(View):
         return Destination(dest)
 
 
-class SeedSignScanView(View):
-    def run(self) -> Destination:
-
-        from .scan_views import ScanView
-        from seedsigner.gui.screens import LargeButtonScreen
-        menu_items = []
-
-        menu_items.append((("Scan your seed", None), None, None, None))
-        menu_items.append((("Scan", FontAwesomeIconConstants.QRCODE), ScanView, QRType.SEED, SignView))
-
-        screen = ButtonListScreen(
-            title="SEED",
-            title_font_size=26,
-            button_data=[entry[0] for entry in menu_items],
-            show_back_button=False,
-            show_power_button=False,
-        )
-        out = False
-        dest = None
-        while not out:
-            selected_menu_num = screen.display()
-
-            if menu_items[selected_menu_num][1] is not None:
-                self.controller.scan_target = menu_items[selected_menu_num][2]
-                dest = menu_items[selected_menu_num][1]
-                self.controller.scan_target = menu_items[selected_menu_num][2]
-                self.controller.next_view = menu_items[selected_menu_num][3]
-                out = True
-
-        return Destination(dest)
+# class SeedSignScanView(View):
+#     def run(self) -> Destination:
+#
+#         from .scan_views import ScanView
+#         from seedsigner.gui.screens import LargeButtonScreen
+#         menu_items = []
+#
+#         menu_items.append((("Scan your seed", None), None, None, None))
+#         menu_items.append((("Scan", FontAwesomeIconConstants.QRCODE), ScanView, QRType.SEED, SignView))
+#
+#         screen = ButtonListScreen(
+#             title="SEED",
+#             title_font_size=26,
+#             button_data=[entry[0] for entry in menu_items],
+#             show_back_button=False,
+#             show_power_button=False,
+#         )
+#         out = False
+#         dest = None
+#         while not out:
+#             selected_menu_num = screen.display()
+#
+#             if menu_items[selected_menu_num][1] is not None:
+#                 self.controller.scan_target = menu_items[selected_menu_num][2]
+#                 dest = menu_items[selected_menu_num][1]
+#                 self.controller.scan_target = menu_items[selected_menu_num][2]
+#                 self.controller.next_view = menu_items[selected_menu_num][3]
+#                 out = True
+#
+#         return Destination(dest)
 
 
 class SignView(View):
@@ -135,76 +135,74 @@ class SignView(View):
         dest = menu_items[selected_menu_num][1]
 
         if menu_items[selected_menu_num][2]:
-            seed = bip39.mnemonic_to_seed(self.controller.miniscript_seed.mnemonic_str)
-            root: bip32.HDKey = bip32.HDKey.from_seed(seed)
-            psbt: PSBT = self.controller.miniscript_psbt
+            root: bip32.HDKey = self.controller.seed.seed
+            psbt: PSBT = self.controller.miniscript.psbt.psbt
             signed = psbt.sign_with(root)
-            print(f"signed inputs:{signed}")
 
         return Destination(dest)
 
 
-class PSBTScanView(View):
-    def run(self) -> Destination:
+# class PSBTScanView(View):
+#     def run(self) -> Destination:
+#
+#         from .scan_views import ScanView
+#         from seedsigner.gui.screens import LargeButtonScreen
+#         menu_items = []
+#
+#         menu_items.append((("Scan your PSBT", None), None, None, None))
+#         menu_items.append((("Scan", FontAwesomeIconConstants.QRCODE), ScanView, QRType.PSBT__BASE64, PSBTCheckView))
+#
+#         screen = ButtonListScreen(
+#             title="PSBT",
+#             title_font_size=26,
+#             button_data=[entry[0] for entry in menu_items],
+#             show_back_button=False,
+#             show_power_button=False,
+#         )
+#         out = False
+#         dest = None
+#         while not out:
+#             selected_menu_num = screen.display()
+#
+#             if menu_items[selected_menu_num][1] is not None:
+#                 self.controller.scan_target = menu_items[selected_menu_num][2]
+#                 dest = menu_items[selected_menu_num][1]
+#                 self.controller.scan_target = menu_items[selected_menu_num][2]
+#                 self.controller.next_view = menu_items[selected_menu_num][3]
+#                 out = True
+#
+#         return Destination(dest)
 
-        from .scan_views import ScanView
-        from seedsigner.gui.screens import LargeButtonScreen
-        menu_items = []
 
-        menu_items.append((("Scan your PSBT", None), None, None, None))
-        menu_items.append((("Scan", FontAwesomeIconConstants.QRCODE), ScanView, QRType.PSBT__BASE64, PSBTCheckView))
-
-        screen = ButtonListScreen(
-            title="PSBT",
-            title_font_size=26,
-            button_data=[entry[0] for entry in menu_items],
-            show_back_button=False,
-            show_power_button=False,
-        )
-        out = False
-        dest = None
-        while not out:
-            selected_menu_num = screen.display()
-
-            if menu_items[selected_menu_num][1] is not None:
-                self.controller.scan_target = menu_items[selected_menu_num][2]
-                dest = menu_items[selected_menu_num][1]
-                self.controller.scan_target = menu_items[selected_menu_num][2]
-                self.controller.next_view = menu_items[selected_menu_num][3]
-                out = True
-
-        return Destination(dest)
-
-
-class DescriptorScanView(View):
-    def run(self) -> Destination:
-
-        from .scan_views import ScanView
-        from seedsigner.gui.screens import LargeButtonScreen
-        menu_items = []
-
-        menu_items.append((("Scan your Descriptor", None), None, None, None))
-        menu_items.append((("Scan", FontAwesomeIconConstants.QRCODE), ScanView, QRType.DESCRIPTOR, PSBTCheckView))
-
-        screen = ButtonListScreen(
-            title="PSBT",
-            title_font_size=26,
-            button_data=[entry[0] for entry in menu_items],
-            show_back_button=False,
-            show_power_button=False,
-        )
-        out = False
-        dest = None
-        while not out:
-            selected_menu_num = screen.display()
-
-            if menu_items[selected_menu_num][1] is not None:
-                dest = menu_items[selected_menu_num][1]
-                self.controller.scan_target = menu_items[selected_menu_num][2]
-                self.controller.next_view = menu_items[selected_menu_num][3]
-                out = True
-
-        return Destination(dest)
+# class DescriptorScanView(View):
+#     def run(self) -> Destination:
+#
+#         from .scan_views import ScanView
+#         from seedsigner.gui.screens import LargeButtonScreen
+#         menu_items = []
+#
+#         menu_items.append((("Scan your Descriptor", None), None, None, None))
+#         menu_items.append((("Scan", FontAwesomeIconConstants.QRCODE), ScanView, QRType.DESCRIPTOR, PSBTCheckView))
+#
+#         screen = ButtonListScreen(
+#             title="PSBT",
+#             title_font_size=26,
+#             button_data=[entry[0] for entry in menu_items],
+#             show_back_button=False,
+#             show_power_button=False,
+#         )
+#         out = False
+#         dest = None
+#         while not out:
+#             selected_menu_num = screen.display()
+#
+#             if menu_items[selected_menu_num][1] is not None:
+#                 dest = menu_items[selected_menu_num][1]
+#                 self.controller.scan_target = menu_items[selected_menu_num][2]
+#                 self.controller.next_view = menu_items[selected_menu_num][3]
+#                 out = True
+#
+#         return Destination(dest)
 
 
 class PSBTQRDisplayView(View):
@@ -217,10 +215,9 @@ class PSBTQRDisplayView(View):
         )
         QRDisplayScreen(qr_encoder=qr_encoder).display()
 
-        self.controller.miniscript_psbt = None
+        self.controller.miniscript.psbt.reset()
+        self.controller.miniscript.descriptor.reset()
 
-        # We're done with this PSBT. Route back to MainMenuView which always
-        #   clears all ephemeral data (except in-memory seeds).
         return Destination(MainMenuView, clear_history=True)
 
 
@@ -240,13 +237,18 @@ class MiniscriptShowPolicyView(View):
             ).display()
 
             if menu_items[selected_menu_num] == 'OK':
-                self.controller.miniscript_step = self.controller.miniscript_step | 4  # descriptor checked step
+                self.controller.miniscript.descriptor.is_checked = True
+
                 # if PSBT load and not signed
-                if (self.controller.miniscript_step & 8) == 8 and (self.controller.miniscript_step & 16) == 0:
+                psbt: MiniPSBT= self.controller.psbt
+                if psbt.is_processed and not psbt.is_checked:
                     return Destination(PSBTCheckView)
-                return Destination(MainMenuView)
+                else:
+                    return self.controller.miniscript.route()
+
             elif menu_items[selected_menu_num] == 'Cancel':
                 return Destination(MainMenuView)
+
 
 class SeedNotSelectedView(View):
 
@@ -311,4 +313,18 @@ class DescriptorRegisterPolicyView(View):
         #  TODO: implement registration process
 
         return Destination(NotYetImplementedView)
+
+    
+class DescriptorNotOwnsPSBTView(View):
+
+    def run(self):
+        from .scan_views import ScanView
+        WarningScreen(
+            title="Wrong descriptor!",
+            status_headline="",
+            text="The descriptor doesn't owns this PSBT, please select another descriptor!",
+            button_data=["OK"],
+        ).display()
+
+        return Destination(ScanView, clear_history=True)
 

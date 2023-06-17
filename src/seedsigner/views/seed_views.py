@@ -225,7 +225,6 @@ class SeedFinalizeView(View):
 
         if button_data[selected_menu_num] == FINALIZE:
             seed_num = self.controller.storage.finalize_pending_seed()
-            #  TODO: if descriptor loaded & not checked ==> go check descriptor ==> descriptor have PoR?
 
             return Destination(SeedOptionsView, view_args={"seed_num": seed_num}, clear_history=True)
 
@@ -332,8 +331,7 @@ class SeedDiscardView(View):
                 self.controller.discard_seed(self.seed_num)
             else:
                 self.controller.storage.clear_pending_seed()
-            self.controller.miniscript_seed = None
-            self.controller.miniscript_step = self.controller.miniscript_step & 62
+            self.controller.miniscript.seed.reset()
             return Destination(MainMenuView, clear_history=True)
 
 
@@ -362,31 +360,6 @@ class SeedOptionsView(View):
 
         button_data = []
 
-        # if self.controller.resume_main_flow == Controller.FLOW__ADDRESS_EXPLORER:
-        #     # Jump straight back into the address explorer script type selection flow
-        #     # But do ont cancel the `resume_main_flow` as we'll still need that after
-        #     # derivation path is specified.
-        #     return Destination(SeedExportXpubScriptTypeView, view_args=dict(seed_num=self.seed_num, sig_type=SettingsConstants.SINGLE_SIG), skip_current_view=True)
-        # 
-        # if self.controller.unverified_address:
-        #     if self.controller.resume_main_flow == Controller.FLOW__VERIFY_SINGLESIG_ADDR:
-        #         # Jump straight back into the single sig addr verification flow
-        #         self.controller.resume_main_flow = None
-        #         return Destination(SeedAddressVerificationView, view_args=dict(seed_num=self.seed_num), skip_current_view=True)
-        # 
-        #     addr = self.controller.unverified_address["address"][:7]
-        #     VERIFY_ADDRESS += f" {addr}"
-        #     button_data.append(VERIFY_ADDRESS)
-        #     
-        # if self.controller.psbt:
-        #  if PSBTParser.has_matching_input_fingerprint(self.controller.psbt, self.seed, network=self.settings.get_value(SettingsConstants.SETTING__NETWORK)):
-        #      if self.controller.resume_main_flow and self.controller.resume_main_flow == Controller.FLOW__PSBT:
-        #          # Re-route us directly back to the start of the PSBT flow
-        #          self.controller.resume_main_flow = None
-        #          self.controller.psbt_seed = self.seed
-        #          return Destination(PSBTOverviewView, skip_current_view=True)
-
-        # button_data.append(SCAN_PSBT)
         button_data.append(SELECT)
         
         if self.settings.get_value(SettingsConstants.SETTING__XPUB_EXPORT) == SettingsConstants.OPTION__ENABLED:
@@ -407,16 +380,10 @@ class SeedOptionsView(View):
         ).display()
 
         if selected_menu_num == RET_CODE__BACK_BUTTON:
-            # Force BACK to always return to the Main Menu
             return Destination(MainMenuView)
 
-        # if button_data[selected_menu_num] == SCAN_PSBT:
-        #     from seedsigner.views.scan_views import ScanView
-        #     self.controller.psbt_seed = self.controller.get_seed(self.seed_num)
-        #     return Destination(ScanView)
         if button_data[selected_menu_num] == SELECT:
-            self.controller.miniscript_seed = self.controller.get_seed(self.seed_num)
-            self.controller.miniscript_step = self.controller.miniscript_step | 1
+            self.controller.miniscript.load_seed(self.controller.get_seed(self.seed_num))
             return Destination(MainMenuView, clear_history=True)
         
         elif button_data[selected_menu_num] == VERIFY_ADDRESS:

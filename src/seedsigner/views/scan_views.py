@@ -8,18 +8,10 @@ from seedsigner.gui.screens.screen import RET_CODE__BACK_BUTTON
 from seedsigner.models import DecodeQR, Seed
 from seedsigner.models.settings import SettingsConstants
 
-
 from .view import BackStackView, MainMenuView, NotYetImplementedView, View, Destination
 
 from .miniscript_views import PSBTCheckView, SeedSignScanView, SignView, PSBTScanView, DescriptorScanView
-from .miniscript_views import PSBTQRDisplayView, SeedNotSelectedView, DescriptorNotSelectedView
-
-
-def process_por(seed, descriptor, alias):
-    import hashlib
-    msg = seed + descriptor + alias
-    msg = bytes(msg, 'utf-8')
-    return hashlib.new('ripemd160', msg).hexdigest()
+from .miniscript_views import PSBTQRDisplayView, SeedNotSelectedView, DescriptorNotSelectedView, DescriptorRegisterPolicyView
     
     
 class ScanView(View):
@@ -36,11 +28,12 @@ class ScanView(View):
 
         # Handle the results
         if self.decoder.is_complete:
+            #  Seed
             if self.decoder.is_seed:
                 seed_mnemonic = self.decoder.get_seed_phrase()
                 if not seed_mnemonic:
                     # seed is not valid, Exit if not valid with message
-                    raise Exception("Not yet implemented!")
+                    return Destination(NotYetImplementedView)
                 else:
                     # Found a valid mnemonic seed! All new seeds should be considered
                     #   pending (might set a passphrase, SeedXOR, etc) until finalized.
@@ -53,50 +46,49 @@ class ScanView(View):
                         return Destination(SeedAddPassphraseView)
                     else:
                         return Destination(SeedFinalizeView)
-            
+
+            #  PSBT
             elif self.decoder.is_psbt:
                 from seedsigner.views.psbt_views import PSBTSelectSeedView, PSBTOverviewView
                 from seedsigner.views.miniscript_views import PSBTCheckView
-                psbt = self.decoder.get_psbt()
-                self.controller.miniscript_psbt = psbt
-                self.controller.miniscript_step = self.controller.miniscript_step | 8
 
-                step = self.controller.miniscript_step
+                self.controller.miniscript.load_psbt(self.decoder.get_psbt())
 
-                #  seed selected and descriptor selected & checked
-                if (step & 1) == 1 and (step & 4) == 4:
-                    return Destination(PSBTCheckView, skip_current_view=True)
-
-                # no seed
-                elif (step & 1) == 0:
-                    return Destination(LoadSeedView, skip_current_view=True)
-
-                # no descriptor
-                elif (step & 2) == 0:
-                    #  TODO: Warning "Descriptor not selected, you might scan one"
-                    return Destination(DescriptorNotSelectedView, skip_current_view=True)
-
-                # descriptor not checked
-                elif (step & 4) == 0:
-                    #  TODO: Warning "Descriptor not checked, you might review it"
-                    return Destination(DescriptorRegisterPolicyView, skip_current_view=True)
+                # seed & descriptor already loaded and descriptor owns psbt
+                if self.controller.miniscript.psbt.is_processed:
+                    return Destination(DescriptorShowPolicy)
 
                 else:
-                    return Destination(NotYetImplementedView, skip_current_view=True)
+                    return Destination(self.controller.miniscript.route())
 
-            # elif self.decoder.is_settings:
-            #     from seedsigner.models.settings import Settings
-            #     settings = self.decoder.get_settings_data()
-            #     Settings.get_instance().update(new_settings=settings)
-            # 
-            #     print(json.dumps(Settings.get_instance()._data, indent=4))
-            # 
-            #     return Destination(SettingsUpdatedView, {"config_name": self.decoder.get_settings_config_name()})
-            
+                # step = self.controller.miniscript_step
+                #
+                # #  seed selected and descriptor selected & checked
+                # if (step & 1) == 1 and (step & 4) == 4:
+                #     return Destination(PSBTCheckView, skip_current_view=True)
+                #
+                # # no seed
+                # elif (step & 1) == 0:
+                #     return Destination(LoadSeedView, skip_current_view=True)
+                #
+                # # no descriptor
+                # elif (step & 2) == 0:
+                #     #  TODO: Warning "Descriptor not selected, you might scan one"
+                #     return Destination(DescriptorNotSelectedView, skip_current_view=True)
+                #
+                # # descriptor not checked
+                # elif (step & 4) == 0:
+                #     #  TODO: Warning "Descriptor not checked, you might review it"
+                #     return Destination(DescriptorRegisterPolicyView, skip_current_view=True)
+                #
+                # else:
+                #     return Destination(NotYetImplementedView, skip_current_view=True)
+
+            # Descriptor
             elif self.decoder.is_wallet_descriptor:
-                # from seedsigner.views.seed_views import MultisigWalletDescriptorView
                 descriptor_str = self.decoder.get_wallet_descriptor()
 
+                #  process the str
                 try:
                     # We need to replace `/0/*` wildcards with `/{0,1}/*` in order to use
                     # the Descriptor to verify change, too.
@@ -115,63 +107,27 @@ class ScanView(View):
 
                 if descriptor.miniscript:
 
-                        self.controller.miniscript_descriptor = descriptor
-                        self.controller.miniscript_step = self.controller.miniscript_step | 2  # descriptor selected step
-                        self.controller.miniscript_step = self.controller.miniscript_step & 59 # descriptor unchecked
+                    self.controller.miniscript.load_descriptor(descriptor)
+                        # self.controller.miniscript_step = self.controller.miniscript_step | 2  # descriptor selected step
+                        # self.controller.miniscript_step = self.controller.miniscript_step & 59 # descriptor unchecked
 
-                        if self.controller.miniscript_seed:
-                            seed = bip39.mnemonic_to_seed(self.controller.miniscript_seed.mnemonic_str)
-                            fingerprint = bip32.HDKey.from_seed(seed).my_fingerprint
+                    seed = self.controller.miniscript.seed
+                    descriptor = self.controller.miniscript.descriptor
 
-                            # check if seed have control on descriptor
-                            have_control = False
-                            for i in descriptor.keys:
-                                if i.fingerprint == fingerprint:
-                                    have_control = True
-                                    
-                            #  check PoR
-                            if have_control:
-                                por = self.decoder.decoder.get_wallet_por()
-                                alias = self.decoder.decoder.get_wallet_alias()
-                                if por == '':
-                                    # return Destination(DescriptorRegisterPolicyView)
-                                    print("Destination=>DescriptorRegisterPolicyView")
-                                    return Destination(MainMenuView, clear_history=True)
-                                    pass
-                                por2 = process_por(self.controller.miniscript_seed.mnemonic_str, descriptor_str, alias)
-                                # print(f"por2={por2}")
+                    if seed.is_loaded and seed.control_descriptor() and descriptor.has_valid_por():
+                        return Destination(MiniscriptShowPolicyView)
 
-                                #  descriptor have valid PoR
-                                if por == por2:
-                                    # return Destination(MiniscriptShowPolicyView)
-                                    print("Destination=>MiniscriptShowPolicyView")
-                                    return Destination(MiniscriptShowPolicyView, view_args={'alias': alias})
-                                    pass
+                    elif seed.is_loaded and not descriptor.has_por():
+                        return Destination(DescriptorRegisterPolicyView)
 
-                                else:
-                                    # TODO: invalid PoR
-                                    # return Destination(DescriptorInvalidPoRView)
-                                    print("Destination=>DescriptorInvalidPoRView")
-                                    return Destination(MainMenuView, clear_history=True)
-                                    pass
+                    else:
+                        return Destination(self.controller.miniscript.route())
 
-                            else:
-                                # TODO: Warning=> "the selected seed don't have control on this descriptor, select an other one
-                                print("Destination=>DescriptorWrongSeed")
-                                return Destination(SeedsMenuView, clear_history=True)
-                        else:
-                            return Destination(SeedNotSelectedView, clear_history=True)
+            return Destination(NotYetImplementedView)
+        
+        else:
+            return Destination(MainMenuView)
 
-                else:
-                    return Destination(NotYetImplementedView)
-            
-            else:
-                return Destination(NotYetImplementedView)
-
-        elif self.decoder.is_invalid:
-            raise Exception("QRCode not recognized or not yet supported.")
-
-        return Destination(MainMenuView)
 
 
 
