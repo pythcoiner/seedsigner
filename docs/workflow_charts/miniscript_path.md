@@ -84,7 +84,7 @@ T1 -- No --> V2[DescriptorRegisterPolicyView]
                 
                 W2 -- continue --> V01
 
-V4[DescriptorShowPolicyView] -- ACK ---> 
+V4[MiniscriptShowPolicyView] -- ACK ---> 
 
 V01[ScanView]  --> 
 

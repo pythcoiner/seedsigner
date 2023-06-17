@@ -14,7 +14,7 @@ from embit import bip39, bip32
 from embit.bip32 import HDKey
 from embit.psbt import PSBT
 
-from .view import BackStackView, View, Destination, MainMenuView
+from .view import BackStackView, View, Destination, MainMenuView, NotYetImplementedView
 
 
 
@@ -273,4 +273,40 @@ class DescriptorNotSelectedView(View):
         ).display()
 
         return Destination(ScanView)
+
+
+class DescriptorWrongSeedView(View):
+
+    def run(self):
+        from .seed_views import LoadSeedView
+        WarningScreen(
+            title="Wrong seed!",
+            status_headline="",
+            text="this seed doesn't controll this descriptor, please choose another one!",
+            button_data=["OK"],
+        ).display()
+
+        return Destination(LoadSeedView)
+    
+class DescriptorInvalidPoRView(View):
+
+    def run(self):
+        from .seed_views import LoadSeedView
+        WarningScreen(
+            title="Invalid PoR!",
+            status_headline="",
+            text="The PoR supplied is invalid, please have a check!",
+            button_data=["OK"],
+        ).display()
+
+        return Destination(DescriptorRegisterPolicyView)
+
+
+class DescriptorRegisterPolicyView(View):
+
+    def run(self):
+
+        #  TODO: implement registration process
+
+        return Destination(NotYetImplementedView)
 
