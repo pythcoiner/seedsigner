@@ -248,10 +248,6 @@ class MiniscriptShowPolicyView(View):
             elif menu_items[selected_menu_num] == 'Cancel':
                 return Destination(MainMenuView)
 
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 class SeedNotSelectedView(View):
 
     def run(self):
@@ -265,10 +261,7 @@ class SeedNotSelectedView(View):
 
         return Destination(LoadSeedView)
 
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
 class DescriptorNotSelectedView(View):
 
     def run(self):
@@ -282,11 +275,6 @@ class DescriptorNotSelectedView(View):
 
         return Destination(ScanView)
 
-<<<<<<< HEAD
-=======
-<<<<<<< Updated upstream
-=======
->>>>>>> f6eef00928a52e550526dcc0a71b179d436b0780
 
 class DescriptorWrongSeedView(View):
 
@@ -300,12 +288,8 @@ class DescriptorWrongSeedView(View):
         ).display()
 
         return Destination(LoadSeedView)
-<<<<<<< HEAD
-    
-=======
 
 
->>>>>>> f6eef00928a52e550526dcc0a71b179d436b0780
 class DescriptorInvalidPoRView(View):
 
     def run(self):
@@ -323,15 +307,8 @@ class DescriptorInvalidPoRView(View):
 class DescriptorRegisterPolicyView(View):
 
     def run(self):
-<<<<<<< HEAD
 
         #  TODO: implement registration process
 
         return Destination(NotYetImplementedView)
 
-=======
-        #  TODO: implement registration process
-
-        return Destination(NotYetImplementedView)
->>>>>>> Stashed changes
->>>>>>> f6eef00928a52e550526dcc0a71b179d436b0780
