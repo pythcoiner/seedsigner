@@ -15,9 +15,7 @@ from seedsigner.views.view import Destination, NotYetImplementedView, UnhandledE
 
 from .models import Seed, SeedStorage, Settings, Singleton, PSBTParser
 
-
 logger = logging.getLogger(__name__)
-
 
 
 class BackStack(List[Destination]):
@@ -29,7 +27,6 @@ class BackStack(List[Destination]):
             out += f"    {index:2d}: {destination}\n"
         out += "]"
         return out
-            
 
 
 class Controller(Singleton):
@@ -73,8 +70,8 @@ class Controller(Singleton):
     miniscript_descriptor: Descriptor = None
     miniscript_psbt: PSBT = None
     miniscript_seed: Seed = None
-    miniscript_step: int = 0     # b0=seed_selected b1=descriptor_selected, b2=descriptor_checked b3=psbt_selected
-                                 # b4=psbt_checked, b5=psbt_signed
+    miniscript_step: int = 0  # b0=seed_selected b1=descriptor_selected, b2=descriptor_checked b3=psbt_selected
+    # b4=psbt_checked, b5=psbt_signed
 
     image_entropy_preview_frames: List[Image] = None
     image_entropy_final_image: Image = None
@@ -94,7 +91,6 @@ class Controller(Singleton):
     back_stack: BackStack = None
     screensaver: ScreensaverScreen = None
 
-
     @classmethod
     def get_instance(cls):
         # This is the only way to access the one and only instance
@@ -103,7 +99,6 @@ class Controller(Singleton):
         else:
             # Instantiate the one and only Controller instance
             return cls.configure_instance()
-
 
     @classmethod
     def configure_instance(cls, disable_hardware=False):
@@ -135,7 +130,7 @@ class Controller(Singleton):
         # TODO: Rename "storage" to something more indicative of its temp, in-memory state
         controller.storage = SeedStorage()
         controller.settings = Settings.get_instance()
-        
+
         controller.microsd = MicroSD.get_instance()
         controller.microsd.start_detection()
 
@@ -152,15 +147,13 @@ class Controller(Singleton):
 
         # Other behavior constants
         controller.screensaver_activation_ms = 120 * 1000
-    
-        return cls._instance
 
+        return cls._instance
 
     @property
     def camera(self):
         from .hardware.camera import Camera
         return Camera.get_instance()
-
 
     def get_seed(self, seed_num: int) -> Seed:
         if seed_num < len(self.storage.seeds):
@@ -168,13 +161,11 @@ class Controller(Singleton):
         else:
             raise Exception(f"There is no seed_num {seed_num}; only {len(self.storage.seeds)} in memory.")
 
-
     def discard_seed(self, seed_num: int):
         if seed_num < len(self.storage.seeds):
             del self.storage.seeds[seed_num]
         else:
             raise Exception(f"There is no seed_num {seed_num}; only {len(self.storage.seeds)} in memory.")
-
 
     def pop_prev_from_back_stack(self):
         from .views import Destination
@@ -186,11 +177,9 @@ class Controller(Singleton):
                 # One more pop back gives us the actual "back" View_cls
                 return self.back_stack.pop()
         return Destination(None)
-    
 
     def clear_back_stack(self):
         self.back_stack = BackStack()
-
 
     def start(self) -> None:
         from .views import MainMenuView, BackStackView
@@ -234,7 +223,7 @@ class Controller(Singleton):
                 if next_destination.View_cls == MainMenuView:
                     # Home always wipes the back_stack
                     self.clear_back_stack()
-                    
+
                     # Home always wipes the back_stack/state of temp vars
                     self.resume_main_flow = None
                     self.multisig_wallet_descriptor = None
@@ -243,7 +232,7 @@ class Controller(Singleton):
                     self.psbt = None
                     self.psbt_parser = None
                     self.psbt_seed = None
-                
+
                 print(f"back_stack: {self.back_stack}")
 
                 try:
@@ -283,7 +272,7 @@ class Controller(Singleton):
                     self.back_stack.append(next_destination)
                 else:
                     print(f"NOT appending {next_destination}")
-                
+
                 print("-" * 30)
 
         finally:
@@ -294,10 +283,8 @@ class Controller(Singleton):
             print("Clearing screen, exiting")
             Renderer.get_instance().display_blank_screen()
 
-
     def start_screensaver(self):
         self.screensaver.start()
-
 
     def handle_exception(self, e) -> Destination:
         """
@@ -325,7 +312,7 @@ class Controller(Singleton):
             if ", line " in traceback_line:
                 line_info = traceback_line.split("/")[-1].replace("\"", "").replace("line ", "")
                 break
-        
+
         error = [
             exception_type,
             line_info,

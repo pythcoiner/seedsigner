@@ -53,6 +53,7 @@ class MiniDescriptor:
         seed = self.parent.seed.mnemonic
         descriptor = self.descriptor.full_policy
         alias = self.descriptor_alias
+<<<<<<< HEAD
         
         msg = seed + descriptor + alias
         msg = bytes(msg, 'utf-8')
@@ -77,11 +78,41 @@ class MiniSeed:
         return self.seed.my_fingerprint
         
     def control_descriptor(self) -> bool:  
+=======
+
+        msg = seed + descriptor + alias
+        msg = bytes(msg, 'utf-8')
+        return hashlib.new('ripemd160', msg).hexdigest()
+
+
+class MiniSeed:
+    parent: MiniscriptController = None
+    mnemonic: str = ""
+    seed: HDKey = None
+    is_loaded = False
+
+    def __init__(self, parent):
+        self.parent = parent
+
+    def load(self, mnemonic: str):
+        self.mnemonic = mnemonic
+        self.seed = bip32.HDKey.from_seed(bip39.mnemonic_to_seed(mnemonic))
+        self.is_loaded = False
+
+    def fingerprint(self) -> int | bytes:
+        return self.seed.my_fingerprint
+
+    def control_descriptor(self) -> bool:
+>>>>>>> f6eef00928a52e550526dcc0a71b179d436b0780
         have_control = False
         for i in self.parent.descriptor.descriptor.keys:
             if i.fingerprint == self.fingerprint:
                 have_control = True
+<<<<<<< HEAD
                 
+=======
+
+>>>>>>> f6eef00928a52e550526dcc0a71b179d436b0780
         return have_control
 
 
@@ -90,6 +121,7 @@ class MiniscriptController:
     def __init__(self):
         self.descriptor = MiniDescriptor(self)
         self.seed = MiniSeed(self)
+<<<<<<< HEAD
         
     def load_descriptor(self, descriptor):
         self.descriptor = MiniDescriptor(self)
@@ -102,12 +134,31 @@ class MiniscriptController:
         if not self.seed.is_loaded and descriptor_init:
             return Destination(SeedNotSelectedView, clear_history=True)
         
+=======
+
+    def load_descriptor(self, descriptor):
+        self.descriptor = MiniDescriptor(self)
+        self.descriptor.load(descriptor)
+
+    def route(self, _from=None) -> Destination:
+
+        descriptor_init = self.descriptor.is_loaded and not self.descriptor.is_checked
+
+        if not self.seed.is_loaded and descriptor_init:
+            return Destination(SeedNotSelectedView, clear_history=True)
+
+>>>>>>> f6eef00928a52e550526dcc0a71b179d436b0780
         elif self.seed.is_loaded and descriptor_init:
 
             if self.seed.control_descriptor(self.descriptor):
                 if self.descriptor.has_por():
                     if self.descriptor.has_valid_por():
+<<<<<<< HEAD
                         return Destination(MiniscriptShowPolicyView, view_args={'alias': self.descriptor.descriptor_alias})
+=======
+                        return Destination(MiniscriptShowPolicyView,
+                                           view_args={'alias': self.descriptor.descriptor_alias})
+>>>>>>> f6eef00928a52e550526dcc0a71b179d436b0780
                     else:
                         return Destination(DescriptorInvalidPoRView, clear_history=True)
                 else:
@@ -116,8 +167,11 @@ class MiniscriptController:
                 return Destination(DescriptorWrongSeedView, clear_history=True)
         else:
             return Destination(NotYetImplementedView, clear_history=True)
+<<<<<<< HEAD
             
         
             
+=======
 
-    
+>>>>>>> f6eef00928a52e550526dcc0a71b179d436b0780
+
