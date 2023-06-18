@@ -13,9 +13,8 @@ from seedsigner.hardware.microsd import MicroSD
 from seedsigner.views.screensaver import ScreensaverScreen
 from seedsigner.views.view import Destination, NotYetImplementedView, UnhandledExceptionView
 
-from seedsigner.models.miniscript import MiniScriptController, MiniSeed, MiniDescriptor, MiniPSBT
-
 from .models import Seed, SeedStorage, Settings, Singleton, PSBTParser
+from .models import MiniscriptController
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +31,7 @@ class BackStack(List[Destination]):
 
 
 class Controller(Singleton):
+
     """
         The Controller is a globally available singleton that maintains SeedSigner state.
 
@@ -69,7 +69,8 @@ class Controller(Singleton):
     multisig_wallet_descriptor: Descriptor = None
 
     #  Miniscript
-    miniscript = MiniScriptController()
+
+    miniscript = MiniscriptController()
     # miniscript_descriptor: Descriptor = None
     # miniscript_psbt: PSBT = None
     # miniscript_seed: Seed = None

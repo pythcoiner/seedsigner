@@ -348,6 +348,7 @@ class SeedOptionsView(View):
 
     def run(self):
         from seedsigner.views.psbt_views import PSBTOverviewView
+        from seedsigner.views.miniscript_views import MiniscriptRouterView
 
         # SCAN_PSBT = ("Scan PSBT", FontAwesomeIconConstants.QRCODE)
         SELECT = "Select"
@@ -384,7 +385,7 @@ class SeedOptionsView(View):
 
         if button_data[selected_menu_num] == SELECT:
             self.controller.miniscript.load_seed(self.controller.get_seed(self.seed_num))
-            return Destination(MainMenuView, clear_history=True)
+            return Destination(MiniscriptRouterView, clear_history=True)
         
         elif button_data[selected_menu_num] == VERIFY_ADDRESS:
             return Destination(SeedAddressVerificationView, view_args=dict(seed_num=self.seed_num))
