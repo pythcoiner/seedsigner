@@ -260,7 +260,7 @@ class MiniscriptShowPolicyView(View):
         while True:
             selected_menu_num = ButtonListScreen(
                 title="Descriptor Alias:",
-                is_button_text_centered=False,
+                is_button_text_centered=True,
                 button_data=menu_items
             ).display()
 
@@ -341,11 +341,43 @@ class DescriptorRegisterPolicyView(View):
 
     def run(self):
 
-        #  TODO: implement registration process
-        print('Descriptor registration process not yet implemented')
+        descriptor: Descriptor = self.controller.miniscript.descriptor.descriptor
+        policy = descriptor.to_string()
 
-        return Destination(NotYetImplementedView)
+        alias = self.controller.miniscript.descriptor.descriptor_alias
+        menu_items = [alias, ]
 
+        for i, k in enumerate(descriptor.keys):
+            policy = policy.replace(str(k), chr(65 + i))
+            menu_items.append(chr(65 + i) + " =")
+            key = str(k)
+            menu_items += [key[i:i+15] for i in range(0, len(key), 15)]
+
+        menu_items.append('Policy:')
+
+        n = 15
+        chunks = [policy[i:i+n] for i in range(0, len(policy), n)]
+
+        for i in chunks:
+            print(i)
+            menu_items.append(i)
+
+        menu_items += ['Save', 'Continue', 'Cancel']
+
+        while True:
+            selected_menu_num = ButtonListScreen(
+                title="Check Descriptor:",
+                is_button_text_centered=True,
+                button_data=menu_items
+            ).display()
+
+            if menu_items[selected_menu_num] == 'Continue':
+                self.controller.miniscript.descriptor.is_checked = True
+                return Destination(MiniscriptRouterView)
+
+
+            elif menu_items[selected_menu_num] == 'Cancel':
+                return Destination(MainMenuView)
     
 class DescriptorNotOwnsPSBTView(View):
 
