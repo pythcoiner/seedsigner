@@ -18,8 +18,37 @@ from seedsigner.models.psbt_parser import PSBTParser
 from . import QRType, Seed
 from .settings import SettingsConstants
 
+from bech32 import bech32_decode, bech32_encode, convertbits
+from embit import bip39, bip32
+from embit.ec import PrivateKey as EmbitPrivateKey
+from binascii import unhexlify
+import hashlib
+
 
 logger = logging.getLogger(__name__)
+
+
+def lnurl_decode(lnurl: str) :
+    lnurl = lnurl.replace('lightning:', '')
+    hrp, data = bech32_decode(lnurl)
+    try:
+        assert hrp
+        assert data
+    except:
+        return None
+    bech32_data = convertbits(data, 5, 8, False)
+    try:
+        assert bech32_data
+    except:
+        return None
+    return bytes(bech32_data).decode()
+
+
+def lnurl_encode(url: str) -> str:
+    bech32_data = convertbits(url.encode(), 8, 5, True)
+    assert bech32_data
+    lnurl = bech32_encode("lnurl", bech32_data)
+    return lnurl.upper()
 
 
 
@@ -44,6 +73,7 @@ class DecodeQR:
         self.complete = False
         self.qr_type = None
         self.decoder = None
+        self.lnurl = None
 
 
     def add_image(self, image):
@@ -55,15 +85,23 @@ class DecodeQR:
 
 
     def add_data(self, data):
-        # print(f'DecodeQR.add_data({data}')
-        if data == None:
+        print(f'DecodeQR.add_data({data}')
+        if data is None:
             return DecodeQRStatus.FALSE
 
         qr_type = DecodeQR.detect_segment_type(data, wordlist_language_code=self.wordlist_language_code)
 
-        # print(f"qr_type={qr_type}")
+        print(f"qr_type={qr_type}")
 
-        if self.qr_type == None:
+        # LNURL
+        if qr_type == QRType.LNURL:
+            print('INTO IF--------------------------------')
+            data = data.decode('utf-8')
+            lnurl = lnurl_decode(data)
+            self.lnurl = lnurl
+            return DecodeQRStatus.COMPLETE
+
+        elif self.qr_type == None:
             self.qr_type = qr_type
 
             if self.qr_type in [QRType.PSBT__UR2, QRType.OUTPUT__UR, QRType.ACCOUNT__UR, QRType.BYTES__UR]:
@@ -96,12 +134,16 @@ class DecodeQR:
             elif self.qr_type == QRType.WALLET__CONFIGFILE:
                 self.decoder = MultiSigConfigFileQRDecoder()
 
+
         elif self.qr_type != qr_type:
             raise Exception('QR Fragment Unexpected Type Change')
         
         if not self.decoder:
             # Did not find any recognizable format
             return DecodeQRStatus.INVALID
+
+
+
 
         # Process the binary formats first
         if self.qr_type == QRType.SEED__COMPACTSEEDQR:
@@ -257,6 +299,7 @@ class DecodeQR:
             QRType.PSBT__BASE43,
         ]
 
+
     @property
     def is_seed(self):
         return self.qr_type in [
@@ -324,11 +367,13 @@ class DecodeQR:
                 # are strings.
                 # TODO: Convert the test suite rather than handle here?
                 s = s.decode('utf-8')
+                
 
-
+            if "lnurl" in s:
+                return QRType.LNURL
 
             # PSBT
-            if re.search("^UR:CRYPTO-PSBT/", s, re.IGNORECASE):
+            elif re.search("^UR:CRYPTO-PSBT/", s, re.IGNORECASE):
                 return QRType.PSBT__UR2
                 
             elif re.search("^UR:CRYPTO-OUTPUT/", s, re.IGNORECASE):
@@ -585,6 +630,7 @@ class DecodeQR:
         descriptor += script_close
 
         return descriptor
+
 
 class BaseQrDecoder:
     def __init__(self):

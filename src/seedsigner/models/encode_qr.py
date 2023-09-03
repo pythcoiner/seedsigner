@@ -30,6 +30,7 @@ class EncodeQR:
 
     # Dataclass input vars on __init__()
     psbt: PSBT = None
+    lnurl: str = None
     seed_phrase: List[str] = None
     passphrase: str = None
     derivation: str = None
@@ -99,6 +100,11 @@ class EncodeQR:
         
         elif self.qr_type == QRType.BITCOIN_ADDRESS:
             self.encoder = BitcoinAddressEncoder(address=self.bitcoin_address)
+
+        # LNURL
+
+        elif self.qr_type == QRType.LNURL:
+            self.encoder = LNURLQrEncoder(lnurl=self.lnurl, qr_density=self.qr_density)
 
         else:
             raise Exception('QR Type not supported')
@@ -260,7 +266,79 @@ class SpecterPsbtQrEncoder(BasePsbtQrEncoder):
     @property
     def is_complete(self):
         return self.sent_complete
+    
+    
+class LNURLQrEncoder(BaseQrEncoder):
+    def __init__(self, lnurl, qr_density):
+        super().__init__()
+        self.qr_max_fragement_size = 65
+        self.parts = []
+        self.part_num_sent = 0
+        self.sent_complete = False
+        self.lnurl = lnurl
 
+        if qr_density == SettingsConstants.DENSITY__LOW:
+            self.qr_max_fragement_size = 40
+        elif qr_density == SettingsConstants.DENSITY__MEDIUM:
+            self.qr_max_fragement_size = 65
+        elif qr_density == SettingsConstants.DENSITY__HIGH:
+            self.qr_max_fragement_size = 90
+
+        self._create_parts()
+
+
+    def _create_parts(self):
+        # lnurl = bytes(self.lnurl, 'utf-8')
+        # base64_url = b2a_base64(lnurl)
+        #
+        # if base64_url[-1:] == b"\n":
+        #     base64_url = base64_url[:-1]
+
+        # base64_url = base64_url.decode('utf-8')
+        base64_url = self.lnurl
+
+        start = 0
+        stop = self.qr_max_fragement_size
+        qr_cnt = ((len(base64_url)-1) // self.qr_max_fragement_size) + 1
+
+        if qr_cnt == 1:
+            self.parts.append(base64_url[start:stop])
+
+        cnt = 0
+        while cnt < qr_cnt and qr_cnt != 1:
+            part = "p" + str(cnt+1) + "of" + str(qr_cnt) + " " + base64_url[start:stop]
+            self.parts.append(part)
+
+            start = start + self.qr_max_fragement_size
+            stop = stop + self.qr_max_fragement_size
+            if stop > len(base64_url):
+                stop = len(base64_url)
+            cnt += 1
+
+    def seq_len(self):
+        return len(self.parts)
+
+
+    def next_part(self) -> str:
+        # if part num sent is gt number of parts, start at 0
+        if self.part_num_sent > (len(self.parts) - 1):
+            self.part_num_sent = 0
+
+        part = self.parts[self.part_num_sent]
+
+        # when parts sent eq num of parts in list
+        if self.part_num_sent == (len(self.parts) - 1):
+            self.sent_complete = True
+
+        # increment to next part
+        self.part_num_sent += 1
+
+        return part
+
+
+    @property
+    def is_complete(self):
+        return self.sent_complete
 
 
 class SeedQrEncoder(BaseQrEncoder):

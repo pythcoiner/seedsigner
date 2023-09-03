@@ -30,5 +30,7 @@ class QRType:
     OUTPUT__UR = "output__ur"
     ACCOUNT__UR = "account__ur"
     BYTES__UR = "bytes__ur"
+    
+    LNURL = 'lnurl'
 
     INVALID = "invalid"

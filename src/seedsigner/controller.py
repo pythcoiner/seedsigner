@@ -70,6 +70,8 @@ class Controller(Singleton):
 
     #  Miniscript
 
+    lnurl = None
+
     miniscript = MiniscriptController()
     # miniscript_descriptor: Descriptor = None
     # miniscript_psbt: PSBT = None

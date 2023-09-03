@@ -13,13 +13,27 @@ from .view import BackStackView, MainMenuView, NotYetImplementedView, View, Dest
 from .miniscript_views import PSBTCheckView, SignView  #, DescriptorScanView  , SeedSignScanView, PSBTScanView,
 from .miniscript_views import PSBTQRDisplayView, SeedNotSelectedView, DescriptorNotSelectedView, DescriptorRegisterPolicyView
 from .miniscript_views import MiniscriptRouterView
-    
-    
+
+from bech32 import bech32_decode, bech32_encode, convertbits
+from embit import bip39, bip32
+from embit.ec import PrivateKey as EmbitPrivateKey
+from binascii import unhexlify
+import hashlib
+
+
+def lnurl_encode(url: str) -> str:
+    bech32_data = convertbits(url.encode(), 8, 5, True)
+    assert bech32_data
+    lnurl = bech32_encode("lnurl", bech32_data)
+    return lnurl.upper()
+
+
 class ScanView(View):
     def run(self):
         from seedsigner.gui.screens.scan_screens import ScanScreen
         from seedsigner.views.seed_views import SeedsMenuView, LoadSeedView
         from seedsigner.views.miniscript_views import MiniscriptShowPolicyView
+        from seedsigner.views.lnurl_views import LoginView
 
         wordlist_language_code = self.settings.get_value(SettingsConstants.SETTING__WORDLIST_LANGUAGE)
         self.decoder = DecodeQR(wordlist_language_code=wordlist_language_code)
@@ -27,8 +41,31 @@ class ScanView(View):
         # Start the live preview and background QR reading
         ScanScreen(decoder=self.decoder).display()
 
+        if self.decoder.lnurl:
+            out = self.decoder.lnurl
+            k1 = unhexlify(out.split('&hmac=')[0].split('&k1=')[1])
+            hmac = unhexlify(out.split('&hmac=')[1])
+            domain = out.split('//')[1].split('/')[0]
+            domain = bytes(domain, 'utf-8')
+            domain = hashlib.sha256(domain).digest()
+
+            seed = self.controller.miniscript.seed.seed
+
+            if seed:
+                root = seed.derive(domain)
+                pk = root.key
+                sig = str(pk.sign(k1))
+                pub = str(root.to_public().key)
+
+                lnurl = self.decoder.lnurl + '&sig=' + sig + '&key=' + pub
+                # self.controller.lnurl = lnurl_encode(lnurl)
+                self.controller.lnurl = lnurl
+
+            return Destination(LoginView)
+
         # Handle the results
         if self.decoder.is_complete:
+
             #  Seed
             if self.decoder.is_seed:
                 print("decoder is seed")
